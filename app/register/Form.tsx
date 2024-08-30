@@ -1,0 +1,74 @@
+"use client";
+
+import { FormEvent } from "react";
+
+export default function Form() {
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    const form = event.target as HTMLFormElement;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    console.log(data);
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="relative w-full mb-3">
+        <label
+          className="block uppercase text-blueGray-600 text-xs font-bold mb-2"
+          htmlFor="userName"
+        >
+          Name
+        </label>
+        <input
+          type="text"
+          id="userName"
+          name="userName"
+          className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
+          placeholder="e.g. John Doe"
+        />
+      </div>
+
+      <div className="relative w-full mb-3">
+        <label
+          className="block uppercase text-blueGray-600 text-xs font-bold mb-2"
+          htmlFor="userEmail"
+        >
+          Email
+        </label>
+        <input
+          type="email"
+          id="userEmail"
+          name="userEmail"
+          className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
+          placeholder="e.g. john.doe@gmail.com"
+        />
+      </div>
+
+      <div className="relative w-full mb-3">
+        <label
+          className="block uppercase text-blueGray-600 text-xs font-bold mb-2"
+          htmlFor="userPassword"
+        >
+          Password
+        </label>
+        <input
+          type="password"
+          id="userPassword"
+          name="userPassword"
+          className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
+          placeholder="Password"
+        />
+      </div>
+
+      <div className="text-center mt-6">
+        <button
+          className="bg-slate-800 text-white active:bg-slate-600 text-sm font-bold uppercase px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none mr-1 mb-1 w-full ease-linear transition-all duration-150"
+          type="submit"
+        >
+          Create Account
+        </button>
+      </div>
+    </form>
+  );
+}

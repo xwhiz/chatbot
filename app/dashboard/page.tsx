@@ -11,11 +11,11 @@ export default function Dashboard() {
   return (
     <WithSidebar>
       <div className="container mx-auto p-4 h-full overflow-auto scrollbar">
-        <h1 className="text-slate-900 text-center mt-6 mb-8 font-bold text-3xl">
+        <h1 className="text-slate-900 text-center mt-6 mb-8 font-bold text-3xl md:text-left">
           Welcome to Admin Dashboard
         </h1>
 
-        <h2 className="text-slate-900 text-center mt-6 mb-8 font-bold text-2xl">
+        <h2 className="text-slate-900 text-center mt-6 mb-8 font-bold text-2xl md:text-left">
           Overview
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -33,7 +33,7 @@ export default function Dashboard() {
           </article>
         </div>
 
-        <h2 className="text-slate-900 text-center mt-10 mb-8 font-bold text-2xl">
+        <h2 className="text-slate-900 text-center mt-10 mb-8 font-bold text-2xl md:text-left">
           Chats timeline
         </h2>
 
@@ -54,7 +54,7 @@ export default function Dashboard() {
           />
         </div>
 
-        <h2 className="text-slate-900 text-center mt-10 mb-8 font-bold text-2xl">
+        <h2 className="text-slate-900 text-center mt-10 mb-8 font-bold text-2xl md:text-left">
           Users timeline
         </h2>
 

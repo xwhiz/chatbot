@@ -69,6 +69,16 @@ export default function Form() {
           Create Account
         </button>
       </div>
+
+      <div className="text-center mt-6">
+        Already have an account?{" "}
+        <a
+          href="/login"
+          className="text-slate-800 text-sm font-bold leading-relaxed inline-block py-2 whitespace-nowrap uppercase underline cursor-pointer"
+        >
+          Login
+        </a>
+      </div>
     </form>
   );
 }

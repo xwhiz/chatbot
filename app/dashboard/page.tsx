@@ -1,19 +1,78 @@
+"use client";
 import WithSidebar from "@/layouts/WithSidebar";
+
+import { CategoryScale } from "chart.js";
+import { Line } from "react-chartjs-2";
+import Chart from "chart.js/auto";
+
+Chart.register(CategoryScale);
 
 export default function Dashboard() {
   return (
     <WithSidebar>
-      <div className="container mx-auto my-4 p-4 h-full">
-        <div className="flex content-center items-center justify-center h-full">
-          <div className="w-full md:w-10/12 lg:w-6/12 bg-white rounded">
-            <div className="relative flex flex-col min-w-0 break-words w-full shadow-lg rounded-lg border-0">
-              <div className="flex-uto px-4 lg:px-10 py-4 pt-0">
-                <h1 className="text-slate-900 text-center mb-8 mt-10 font-bold text-3xl">
-                  Dashboard
-                </h1>
-              </div>
-            </div>
-          </div>
+      <div className="container mx-auto p-4 h-full overflow-auto scrollbar">
+        <h1 className="text-slate-900 text-center mt-6 mb-8 font-bold text-3xl">
+          Welcome to Admin Dashboard
+        </h1>
+
+        <h2 className="text-slate-900 text-center mt-6 mb-8 font-bold text-2xl">
+          Overview
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <article className="flex flex-col gap-2 justify-center items-center w-full bg-white p-8 rounded shadow-lg">
+            <p>Active Users</p>
+            <h3 className="text-3xl font-semibold">1,000</h3>
+          </article>
+          <article className="flex flex-col gap-2 justify-center items-center w-full bg-white p-8 rounded shadow-lg">
+            <p>Total Users</p>
+            <h3 className="text-3xl font-semibold">10,000</h3>
+          </article>
+          <article className="flex flex-col gap-2 justify-center items-center w-full bg-white p-8 rounded shadow-lg">
+            <p>Revenue</p>
+            <h3 className="text-3xl font-semibold">$10,000</h3>
+          </article>
+        </div>
+
+        <h2 className="text-slate-900 text-center mt-10 mb-8 font-bold text-2xl">
+          Chats timeline
+        </h2>
+
+        <div className="bg-white p-8 rounded shadow-lg">
+          <Line
+            data={{
+              labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+              datasets: [
+                {
+                  label: "Chats",
+                  data: [12, 19, 3, 5, 2, 3],
+                  fill: false,
+                  backgroundColor: "rgb(0, 9, 58)",
+                  borderColor: "rgba(0, 9, 58, 0.2)",
+                },
+              ],
+            }}
+          />
+        </div>
+
+        <h2 className="text-slate-900 text-center mt-10 mb-8 font-bold text-2xl">
+          Users timeline
+        </h2>
+
+        <div className="bg-white p-8 rounded shadow-lg">
+          <Line
+            data={{
+              labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+              datasets: [
+                {
+                  label: "Users",
+                  data: [12, 19, 3, 14, 2, 3],
+                  fill: false,
+                  backgroundColor: "rgb(0, 9, 58)",
+                  borderColor: "rgba(0, 9, 58, 0.2)",
+                },
+              ],
+            }}
+          />
         </div>
       </div>
     </WithSidebar>

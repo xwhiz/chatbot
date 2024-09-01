@@ -28,6 +28,10 @@ export function Sidebar() {
           Users
         </Link>
 
+        <Link href="/chats" className="text-white cursor-pointer underline">
+          Chats
+        </Link>
+
         <Link
           href="rag-knowledge"
           className="text-white cursor-pointer underline"

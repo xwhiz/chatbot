@@ -14,10 +14,25 @@ export function Sidebar() {
         isOpen ? "-translate-x-full" : "translate-x-0"
       }`}
     >
-      <nav className="w-full">
+      <nav className="w-full flex flex-col gap-2">
         <h3 className="text-lg font-bold mb-2">Links</h3>
         <Link href="/profile" className="text-white cursor-pointer underline">
           Profile
+        </Link>
+
+        <Link href="/dashboard" className="text-white cursor-pointer underline">
+          Dashboard
+        </Link>
+
+        <Link href="/users" className="text-white cursor-pointer underline">
+          Users
+        </Link>
+
+        <Link
+          href="rag-knowledge"
+          className="text-white cursor-pointer underline"
+        >
+          RAG Knowledge
         </Link>
       </nav>
 

@@ -7,6 +7,11 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
+fastapi = "^0.114.0"
+uvicorn = "^0.30.6"
+gunicorn = "^23.0.0"
+python-decouple = "^3.8"
+motor = {extras = ["srv"], version = "^3.5.1"}
 
 
 [build-system]

@@ -1,79 +1,102 @@
+"use client";
+import { useState } from "react";
 import HeaderWithButton from "@/components/Headers/HeaderWithButton";
 import { Sidebar } from "@/components/Sidebars/Sidebar";
 import { FaArrowCircleUp } from "react-icons/fa";
 import Chats from "./Chats";
 import WithSidebar from "@/layouts/WithSidebar";
 
-export default function Home() {
-  // if this is admin, redirect them to /dashboard
+const dummyResponses = [
+  "That's an interesting point. Can you elaborate?",
+  "I see. Have you considered looking at it from a different perspective?",
+  "That's a great question. Let me think about that for a moment.",
+  "I understand your concern. Here's what I think about that...",
+  "Thank you for sharing that. It's definitely something to consider.",
+];
 
-  const messages = [
-    {
-      id: 1,
-      text: "Hello from user",
-      from: "user",
-    },
-    {
-      id: 2,
-      text: "Hello from AI",
-      from: "ai",
-    },
-    {
-      id: 3,
-      text: "Hello from user",
-      from: "user",
-    },
-    {
-      id: 4,
-      text: "Hello from AI",
-      from: "ai",
-    },
-    {
-      id: 5,
-      text: "Hello from user",
-      from: "user",
-    },
-    {
-      id: 6,
-      text: "Hello from AI",
-      from: "ai",
-    },
-    {
-      id: 7,
-      text: "Hello from user",
-      from: "user",
-    },
-    {
-      id: 8,
-      text: "Hello from AI",
-      from: "ai",
-    },
-    {
-      id: 9,
-      text: "Hello from user",
-      from: "user",
-    },
-    {
-      id: 10,
-      text: "Hello from AI",
-      from: "ai",
-    },
-  ];
+export default function Home() {
+  const [inputMessage, setInputMessage] = useState("");
+  const [chats, setChats] = useState([]);
+  const [activeItem, setActiveItem] = useState("");
+
+  const deleteChat = (id) => {
+    setChats(chats.filter((chat) => chat.id !== id));
+    if (activeItem === `Chat ${id}`) {
+      setActiveItem("");
+    }
+  };
+  const handleKeyPress = (e: KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+  const startNewChat = (message) => {
+    const newChat = {
+      id: chats.length + 1,
+      name: `Chat ${chats.length + 1}`,
+      messages: [
+        { text: message, sender: "user" },
+        {
+          text: dummyResponses[
+            Math.floor(Math.random() * dummyResponses.length)
+          ],
+          sender: "ai",
+        },
+      ],
+    };
+    setChats([...chats, newChat]);
+    setActiveItem(newChat.name);
+    setInputMessage("");
+  };
+  const sendMessage = () => {
+    if (inputMessage.trim()) {
+      if (activeItem === "") {
+        startNewChat(inputMessage);
+      } else {
+        const updatedChats = chats.map((chat) => {
+          if (chat.name === activeItem) {
+            const userMessage = { text: inputMessage, sender: "user" };
+            const aiResponse = {
+              text: dummyResponses[
+                Math.floor(Math.random() * dummyResponses.length)
+              ],
+              sender: "ai",
+            };
+            return {
+              ...chat,
+              messages: [...chat.messages, userMessage, aiResponse],
+            };
+          }
+          return chat;
+        });
+        setChats(updatedChats);
+        setInputMessage("");
+      }
+    }
+  };
 
   return (
     <WithSidebar>
-      <Chats chats={messages} />
+      {/* <Chats chats={messages} /> */}
 
-      <div className="bg-white p-4 relative h-20">
-        <input
-          type="text"
-          placeholder="Type a message..."
-          className="w-full border border-slate-200 rounded-lg p-3"
-        />
-
-        <button className="absolute z-10 right-4 top-1/2 -translate-y-1/2 text-slate-700 px-4 py-3 rounded-lg ml-2">
-          <FaArrowCircleUp className="text-2xl" />
-        </button>
+      <div className="p-4 border-t">
+        <div className="relative">
+          <input
+            type="text"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            className="w-full p-2 pr-12 border rounded"
+            placeholder={"Type your message..."}
+          />
+          <button
+            onClick={sendMessage}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-blue-500 rounded-full"
+          >
+            <FaArrowCircleUp className="w-6 h-6" />
+          </button>
+        </div>
       </div>
     </WithSidebar>
   );

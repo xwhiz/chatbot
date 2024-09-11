@@ -1,63 +1,93 @@
 "use client";
 
+import { useState } from "react";
 import { useSidebarStore } from "@/stores/sidebar";
-import Link from "next/link";
+import { useChatsStore } from "@/stores/chats";
 import { FaTimes } from "react-icons/fa";
-import { FaTrash } from "react-icons/fa6";
+import { FaTrash, FaChevronDown } from "react-icons/fa6";
+import { User, Users, MessageSquare, Upload, Plus } from "lucide-react";
 
 export function Sidebar() {
   const { isOpen } = useSidebarStore();
+  const [role, setRole] = useState("user");
+  const { chats } = useChatsStore();
+
+  const menuItems = {
+    admin: [
+      { name: "Dashboard", icon: <FaChevronDown /> },
+      { name: "Users", icon: <Users /> },
+      { name: "Chats", icon: <MessageSquare /> },
+      { name: "Upload Documents", icon: <Upload /> },
+    ],
+    user: [{ name: "Profile", icon: <User /> }],
+  };
+
+  const deleteChat = useChatsStore((state) => state.deleteChat);
+  const addChat = useChatsStore((state) => state.addChat);
 
   return (
     <aside
-      className={`w-full h-screen px-12 py-8 bg-slate-800 text-white fixed z-50 top-0 left-0 flex flex-col gap-4 justify-start items-center transition-transform ease-out duration-300 sm:w-9/12 md:static md:translate-x-0 md:w-full md:px-4 ${
+      className={`w-64 h-screen py-8 bg-gray-100 text-white fixed z-50 top-0 left-0 flex flex-col gap-4 justify-start items-center transition-transform ease-out duration-300 md:static md:translate-x-0 ${
         isOpen ? "-translate-x-full" : "translate-x-0"
       }`}
     >
-      <nav className="w-full flex flex-col gap-2">
-        <h3 className="text-lg font-bold mb-2">Links</h3>
-        <Link href="/profile" className="text-white cursor-pointer underline">
-          Profile
-        </Link>
-
-        <Link href="/dashboard" className="text-white cursor-pointer underline">
-          Dashboard
-        </Link>
-
-        <Link href="/users" className="text-white cursor-pointer underline">
-          Users
-        </Link>
-
-        <Link href="/chats" className="text-white cursor-pointer underline">
-          Chats
-        </Link>
-
-        <Link
-          href="rag-knowledge"
-          className="text-white cursor-pointer underline"
-        >
-          RAG Knowledge
-        </Link>
+      <nav className="w-full mt-4 flex-grow overflow-y-auto">
+        {role === "admin" ? (
+          menuItems.admin.map((item) => (
+            <a
+              key={item.name}
+              href="#"
+              className={`flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200`}
+            >
+              {item.icon}
+              <span className="ml-2">{item.name}</span>
+            </a>
+          ))
+        ) : (
+          <>
+            <a
+              href="#"
+              className={`flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200`}
+            >
+              <User />
+              <span className="ml-2">Profile</span>
+            </a>
+            <div className="px-4 py-2 text-gray-700 font-semibold">Chats</div>
+            <div className="overflow-y-auto">
+              {chats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-200`}
+                >
+                  <a href="#" className="flex items-center flex-grow">
+                    <MessageSquare className="w-4 h-4" />
+                    <span className="ml-2">{chat.name}</span>
+                  </a>
+                  <button
+                    onClick={() => deleteChat(chat.id)}
+                    className="text-gray-500 hover:text-red-500"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <a
+              className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 mt-2 hover:cursor-pointer"
+              onClick={() =>
+                addChat({
+                  id: "new-chat",
+                  name: "New Chat",
+                  messages: [],
+                })
+              }
+            >
+              <Plus className="w-4 h-4" />
+              <span className="ml-2">New Chat</span>
+            </a>
+          </>
+        )}
       </nav>
-
-      <hr className="w-full my-1" />
-
-      <ul className="flex flex-col flex-grow gap-2 w-full overflow-y-auto scrollbar pr-1 relative">
-        <h3 className="text-lg font-bold sticky top-0 bg-slate-800 pb-2">
-          Chats
-        </h3>
-
-        {Array.from({ length: 10 }).map((_, i) => (
-          <Link
-            href="/"
-            className="flex gap-2 justify-between items-center bg-slate-700 px-4 py-2 rounded cursor-pointer hover:bg-slate-600"
-            key={i}
-          >
-            <p className="text-white truncate w-full">Chat title</p>
-            <FaTrash className="text-gray-100 hover:text-white" />
-          </Link>
-        ))}
-      </ul>
 
       <hr className="w-full my-1" />
 

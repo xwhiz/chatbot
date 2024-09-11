@@ -4,3 +4,5 @@ from decouple import config
 
 
 app = FastAPI()
+
+CONNECTION_STRING = config()

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./global.css";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
+import { CookiesProvider } from "next-client-cookies/server";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,8 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className + " overflow-x-hidden"}>
-        {children}
-        <ToastContainer stacked />
+        <CookiesProvider>
+          {children}
+          <ToastContainer stacked />
+        </CookiesProvider>
       </body>
     </html>
   );

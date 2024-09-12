@@ -73,15 +73,13 @@ async def register(user: User, response: Response):
     return {
         "success": True,
         "message": "User created successfully",
-        "data": {
-            "token": sign_jwt(
-                {
-                    "name": user.name,
-                    "email": user.email,
-                    "role": user.role,
-                }
-            )
-        },
+        "data": sign_jwt(
+            {
+                "name": user.name,
+                "email": user.email,
+                "role": user.role,
+            }
+        ),
     }
 
 

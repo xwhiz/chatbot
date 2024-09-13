@@ -1,11 +1,16 @@
 import { create } from "zustand";
 
+type ChatTitle = {
+  id: string;
+  title: string;
+};
+
 type State = {
-  chatIDs: string[];
+  chatIDs: ChatTitle[];
 };
 
 type Action = {
-  setChatIDs: (chatIDs: string[]) => void;
+  setChatIDs: (chatIDs: ChatTitle[]) => void;
 };
 
 export const useUserChatsStore = create<State & Action>((set) => ({

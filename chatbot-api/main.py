@@ -1,9 +1,9 @@
 from fastapi import Body, FastAPI, Header, Response, status
-from typing import Annotated
+from typing import Annotated, Optional
 from db_lifespan import db_lifespan
 from fastapi.middleware.cors import CORSMiddleware
 
-from models import User
+from models import User, Chat
 from auth import sign_jwt, decode_jwt
 from utils import hash_password
 
@@ -18,10 +18,16 @@ app.add_middleware(
 )
 
 
-# A middleware that verify the token in the Authorization header and inject the payload into the request
 @app.middleware("http")
 async def verify_token(request, call_next):
-    if request.url.path == "/auth/register" or request.url.path == "/auth/login":
+    allowed_paths = [
+        "/auth/register",
+        "/auth/login",
+        "/seed/create-admin",
+        "/docs",
+        "/openapi.json",
+    ]
+    if request.url.path in allowed_paths:
         response = await call_next(request)
         return response
 
@@ -146,3 +152,83 @@ async def create_admin(authorization: Annotated[str, Header()], response: Respon
         return {"success": False, "message": "Could not create admin"}
 
     return {"message": "Admin created successfully"}
+
+
+# create chat
+@app.post("/add-message")
+async def add_message(
+    response: Response,
+    message: str = Body(...),
+    chat_id: str = Body(None),
+    user_email: str = Body(...),
+):
+    if chat_id is None:
+        # we need to create a new chat
+        chat = Chat(
+            user_email=user_email,
+            messages=[
+                {
+                    "sender": "human",
+                    "message": message,
+                }
+            ],
+        )
+
+        result = await app.database["chats"].insert_one(chat.model_dump())
+
+        if not result:
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return {"success": False, "message": "Could not create chat"}
+
+        if not result.acknowledged:
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return {"success": False, "message": "Could not create chat"}
+
+        response.status_code = status.HTTP_201_CREATED
+        return {
+            "success": True,
+            "message": "Chat created successfully",
+            "chat_id": chat.chat_id,
+        }
+
+    # we need to update an existing chat
+    chat = await app.database["chats"].find_one({"chat_id": chat_id})
+
+    if not chat:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "Chat not found"}
+
+    chat["messages"].append(
+        {
+            "sender": "human",
+            "message": message,
+        }
+    )
+
+    result = await app.database["chats"].update_one(
+        {"chat_id": chat_id},
+        {"$set": {"messages": chat["messages"]}},
+    )
+
+    if not result:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Could not update chat"}
+
+    if not result.acknowledged:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Could not update chat"}
+
+    response.status_code = status.HTTP_200_OK
+    return {"success": True, "message": "Chat updated successfully", "chat_id": chat_id}
+
+
+# I want this as a stream response from the bot
+@app.get("/bot-response")
+async def bot_response(response: Response, chat_id: str = Body(...)):
+    chat = await app.database["chats"].find_one({"chat_id": chat_id})
+
+    if not chat:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "Chat not found"}
+
+    return {"success": True, "message": "Bot response", "data": chat["messages"]}

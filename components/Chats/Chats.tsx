@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaCopy } from "react-icons/fa6";
+import { Message } from "@/stores/activeChatMessages";
 
-interface IChat {
-  id: number;
-  text: string;
-  from: string;
-}
-
-export default function Chats({ chats }: Readonly<{ chats: IChat[] }>) {
+export default function Chats() {
   const chatContainer = useRef<HTMLDivElement>(null);
+  const [chats, setChats] = useState<Message[]>([]);
+
+  useEffect(() => {
+    const fetchChats = async () => {
+      //
+    };
+
+    fetchChats();
+  }, []);
 
   // scroll to the bottom of the chat
   useEffect(() => {
@@ -33,28 +37,28 @@ export default function Chats({ chats }: Readonly<{ chats: IChat[] }>) {
       </p>
 
       <div className="flex flex-col gap-4 mt-8">
-        {chats.map((m) => (
+        {chats.map((m, i) => (
           <div
-            key={m.id}
+            key={i}
             className={`flex flex-col gap-1 justify-center ${
-              m.from === "user" ? "items-end" : "items-start"
+              m.sender === "user" ? "items-end" : "items-start"
             }`}
           >
             <div
               className={`px-4 py-3 rounded-lg ${
-                m.from === "user"
+                m.sender === "user"
                   ? "bg-slate-700 text-white"
                   : "bg-slate-200 text-slate-800"
               }`}
             >
-              {m.text}
+              {m.message}
             </div>
 
             <button
               className={`text-sm text-slate-800 ${
-                m.from === "user" ? "hidden" : "text-left"
+                m.sender === "user" ? "hidden" : "text-left"
               }`}
-              onClick={() => navigator.clipboard.writeText(m.text)}
+              onClick={() => navigator.clipboard.writeText(m.message)}
             >
               <FaCopy className="text-slate-800" />
             </button>

@@ -1,4 +1,4 @@
-from fastapi import Body, FastAPI, Header, Response, status
+from fastapi import Body, FastAPI, Header, Response, status, Request
 from typing import Annotated, Optional
 from db_lifespan import db_lifespan
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,6 +31,11 @@ async def verify_token(request, call_next):
         response = await call_next(request)
         return response
 
+    # if request is options, we don't need to verify the token
+    if request.method == "OPTIONS":
+        response = await call_next(request)
+        return response
+
     authorization = request.headers.get("Authorization")
 
     if not authorization:
@@ -39,9 +44,12 @@ async def verify_token(request, call_next):
     token = authorization.split(" ")[1]
     payload = decode_jwt(token)
 
+    if not payload:
+        return Response(status_code=status.HTTP_401_UNAUTHORIZED)
+
     request.state.payload = payload
-    response = await call_next(request)
-    return response
+
+    return await call_next(request)
 
 
 @app.get("/")
@@ -230,3 +238,23 @@ async def bot_response(response: Response, chat_id: str = Body(...)):
         return {"success": False, "message": "Chat not found"}
 
     return {"success": True, "message": "Bot response", "data": chat["messages"]}
+
+
+@app.get("/chats/ids")
+async def get_chat_ids(request: Request, response: Response):
+    payload = request.state.payload
+    user_email = payload["email"]
+
+    chats = (
+        await app.database["chats"]
+        .find({"user_email": user_email})
+        .to_list(length=1000)
+    )
+
+    chat_ids = [chat["chat_id"] for chat in chats]
+
+    return {
+        "success": True,
+        "message": "Chat ids retrieved successfully",
+        "data": chat_ids,
+    }

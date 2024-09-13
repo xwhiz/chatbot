@@ -55,7 +55,6 @@ export function Sidebar() {
       { name: "Profile", icon: <User />, href: "/profile" },
       { name: "Dashboard", icon: <FaChevronDown />, href: "/dashboard" },
       { name: "Users", icon: <Users />, href: "/users" },
-      { name: "Chats", icon: <MessageSquare />, href: "/chats" },
       { name: "Upload Documents", icon: <Upload />, href: "/documents" },
     ],
     user: [{ name: "Profile", icon: <User /> }],

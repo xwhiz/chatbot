@@ -1,14 +1,57 @@
 "use client";
 
+import axios from "axios";
+import { useCookies } from "next-client-cookies";
+import { useRouter } from "next/navigation";
 import { FormEvent } from "react";
+import { toast } from "react-toastify";
 
 export default function Form() {
-  function handleSubmit(event: FormEvent) {
+  const cookies = useCookies();
+  const router = useRouter();
+
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const form = event.target as HTMLFormElement;
     const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-    console.log(data);
+
+    // validate data
+    const userEmail = formData.get("userEmail") as string;
+    const userPassword = formData.get("userPassword") as string;
+
+    if (!userEmail || !userPassword) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        process.env.NEXT_PUBLIC_API_URL + "/auth/login",
+        {
+          email: userEmail,
+          password: userPassword,
+        }
+      );
+      const data = response.data;
+      toast.success(data.message);
+      form.reset();
+
+      const token = data.data.access_token;
+
+      cookies.set("token", token, {
+        expires: new Date(data.expires),
+      });
+      router.push("/");
+    } catch (error) {
+      const data = (error as any).response.data;
+
+      if (!data.success) {
+        toast.error(data.message);
+        return;
+      }
+
+      toast.error("An error occurred. Please try again.");
+    }
   }
 
   return (

@@ -1,10 +1,9 @@
 "use client";
 import { useState } from "react";
-import HeaderWithButton from "@/components/Headers/HeaderWithButton";
-import { Sidebar } from "@/components/Sidebars/Sidebar";
 import { FaArrowCircleUp } from "react-icons/fa";
-import Chats from "./Chats";
 import WithSidebar from "@/layouts/WithSidebar";
+import { useRouter } from "next/navigation";
+import useAuth from "@/hooks/useAuth";
 
 const dummyResponses = [
   "That's an interesting point. Can you elaborate?",
@@ -15,9 +14,22 @@ const dummyResponses = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   const [inputMessage, setInputMessage] = useState("");
   const [chats, setChats] = useState([]);
   const [activeItem, setActiveItem] = useState("");
+
+  const sessionInformation = useAuth();
+
+  if (!sessionInformation) {
+    return null;
+  }
+
+  if (sessionInformation.role === "admin") {
+    router.push("/dashboard");
+  }
+
+  console.log(sessionInformation);
 
   const deleteChat = (id) => {
     setChats(chats.filter((chat) => chat.id !== id));

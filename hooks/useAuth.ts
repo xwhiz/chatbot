@@ -5,7 +5,11 @@ import { decodeToken } from "@/utils/decodeToken";
 
 export default function useAuth() {
   const cookies = useCookies();
-  const [payload, setPayload] = useState<any>(null);
+  const [payload, setPayload] = useState<{
+    role: string;
+    email: string;
+    name: string;
+  } | null>(null);
   const token = cookies.get("token");
   const router = useRouter();
 
@@ -19,5 +23,5 @@ export default function useAuth() {
     router.push("/login");
   }
 
-  return payload;
+  return [token, payload];
 }

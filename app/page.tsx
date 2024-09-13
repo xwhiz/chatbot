@@ -20,7 +20,7 @@ export default function Home() {
   const [chats, setChats] = useState([]);
   const [activeItem, setActiveItem] = useState("");
 
-  const sessionInformation = useAuth();
+  const [token, sessionInformation] = useAuth();
 
   if (!sessionInformation) {
     return null;

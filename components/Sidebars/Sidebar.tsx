@@ -14,15 +14,21 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { toast } from "react-toastify";
 import { useUserChatsStore } from "@/stores/userChatsStore";
 import { useActiveChatID } from "@/stores/activeChatID";
+import { useActiveChat } from "@/stores/activeChat";
+import Link from "next/link";
 
 export function Sidebar() {
   const [token, session] = useAuth();
   const router = useRouter();
   const cookies = useCookies();
   const { isOpen } = useSidebarStore();
+  const { activeChatId, setActiveChatId } = useActiveChatID();
   const { chatIDs, setChatIDs } = useUserChatsStore();
+  const { chat, setActiveChat } = useActiveChat();
 
   useEffect(() => {
+    if (!session) return;
+
     const fetchChatIDs = async () => {
       try {
         const response = await axios.get(
@@ -37,7 +43,7 @@ export function Sidebar() {
         setChatIDs(chatIDs);
       } catch (error: any) {
         const data = error.response;
-        toast.error(data.message);
+        if (data) toast.error(data.message);
       }
     };
 
@@ -46,10 +52,11 @@ export function Sidebar() {
 
   const menuItems = {
     admin: [
-      { name: "Dashboard", icon: <FaChevronDown /> },
-      { name: "Users", icon: <Users /> },
-      { name: "Chats", icon: <MessageSquare /> },
-      { name: "Upload Documents", icon: <Upload /> },
+      { name: "Profile", icon: <User />, href: "/profile" },
+      { name: "Dashboard", icon: <FaChevronDown />, href: "/dashboard" },
+      { name: "Users", icon: <Users />, href: "/users" },
+      { name: "Chats", icon: <MessageSquare />, href: "/chats" },
+      { name: "Upload Documents", icon: <Upload />, href: "/documents" },
     ],
     user: [{ name: "Profile", icon: <User /> }],
   };
@@ -73,7 +80,15 @@ export function Sidebar() {
               },
             }
           );
-          setChatIDs(chatIDs.filter((id) => id !== chatID));
+          setChatIDs(chatIDs.filter((chat) => chat.id !== chatID));
+          setActiveChatId("");
+          setActiveChat({
+            id: "",
+            title: "",
+            user_email: "",
+            messages: [],
+          });
+
           toast.success("Chat deleted successfully!");
         } catch (error: any) {
           const data = error.response;
@@ -92,42 +107,47 @@ export function Sidebar() {
       }`}
     >
       <nav className="w-full mt-4 flex-grow overflow-y-auto">
-        {session.role === "admin" ? (
+        {session.role.toLowerCase() === "admin" ? (
           menuItems.admin.map((item) => (
-            <a
+            <Link
               key={item.name}
-              href="#"
+              href={item.href}
               className={`flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200`}
             >
               {item.icon}
               <span className="ml-2">{item.name}</span>
-            </a>
+            </Link>
           ))
         ) : (
           <>
-            <a
-              href="#"
+            <Link
+              href="/profile"
               className={`flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200`}
             >
               <User />
               <span className="ml-2">Profile</span>
-            </a>
+            </Link>
             <div className="px-4 py-2 text-gray-700 font-semibold">Chats</div>
             <div className="overflow-y-auto">
               {chatIDs.map((chat) => (
                 <div
-                  key={chat}
-                  className={`flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-200`}
-                  onClick={() => {
-                    useActiveChatID.setState({ activeChatId: chat });
+                  key={chat.id}
+                  className={`trigger hover:cursor-pointer flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-200 ${
+                    chat.id === useActiveChatID.getState().activeChatId
+                      ? "bg-gray-200"
+                      : ""
+                  }`}
+                  onClick={(e: any) => {
+                    if (!e.target.classList.contains("trigger")) return;
+                    useActiveChatID.setState({ activeChatId: chat.id });
                   }}
                 >
-                  <a href="#" className="flex items-center flex-grow">
-                    <MessageSquare className="w-4 h-4" />
-                    <span className="ml-2">{chat}</span>
-                  </a>
+                  <MessageSquare className="trigger w-4 h-4" />
+                  <div className="trigger ml-2 truncate block w-full">
+                    {chat.title || "Untitled Chat"}
+                  </div>
                   <button
-                    onClick={() => handleDeleteChat(chat)}
+                    onClick={() => handleDeleteChat(chat.id)}
                     className="text-gray-500 hover:text-red-500"
                   >
                     <FaTrash />
@@ -138,6 +158,12 @@ export function Sidebar() {
             <a
               className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 mt-2 hover:cursor-pointer"
               onClick={() => {
+                setActiveChat({
+                  id: "",
+                  title: "",
+                  user_email: "",
+                  messages: [],
+                });
                 useActiveChatID.setState({ activeChatId: "" });
               }}
             >

@@ -2,26 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FaCopy } from "react-icons/fa6";
-import { Message } from "@/stores/activeChatMessages";
+import { useActiveChat } from "@/stores/activeChat";
 
 export default function Chats() {
   const chatContainer = useRef<HTMLDivElement>(null);
-  const [chats, setChats] = useState<Message[]>([]);
-
-  useEffect(() => {
-    const fetchChats = async () => {
-      //
-    };
-
-    fetchChats();
-  }, []);
+  const { chat } = useActiveChat();
 
   // scroll to the bottom of the chat
   useEffect(() => {
     if (chatContainer.current) {
       chatContainer.current.scrollTop = chatContainer.current.scrollHeight;
     }
-  }, [chats]);
+  }, [chat]);
 
   return (
     <section
@@ -37,16 +29,16 @@ export default function Chats() {
       </p>
 
       <div className="flex flex-col gap-4 mt-8">
-        {chats.map((m, i) => (
+        {chat.messages.map((m, i) => (
           <div
             key={i}
             className={`flex flex-col gap-1 justify-center ${
-              m.sender === "user" ? "items-end" : "items-start"
+              m.sender === "human" ? "items-end" : "items-start"
             }`}
           >
             <div
               className={`px-4 py-3 rounded-lg ${
-                m.sender === "user"
+                m.sender === "human"
                   ? "bg-slate-700 text-white"
                   : "bg-slate-200 text-slate-800"
               }`}
@@ -56,7 +48,7 @@ export default function Chats() {
 
             <button
               className={`text-sm text-slate-800 ${
-                m.sender === "user" ? "hidden" : "text-left"
+                m.sender === "human" ? "hidden" : "text-left"
               }`}
               onClick={() => navigator.clipboard.writeText(m.message)}
             >

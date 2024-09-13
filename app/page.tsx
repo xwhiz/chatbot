@@ -1,26 +1,54 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaArrowCircleUp } from "react-icons/fa";
 import WithSidebar from "@/layouts/WithSidebar";
 import { useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
 import Chats from "../components/Chats/Chats";
-
-const dummyResponses = [
-  "That's an interesting point. Can you elaborate?",
-  "I see. Have you considered looking at it from a different perspective?",
-  "That's a great question. Let me think about that for a moment.",
-  "I understand your concern. Here's what I think about that...",
-  "Thank you for sharing that. It's definitely something to consider.",
-];
+import { Message } from "@/stores/activeChat";
+import { useActiveChatID } from "@/stores/activeChatID";
+import axios from "axios";
+import { useUserChatsStore } from "@/stores/userChatsStore";
+import { toast } from "react-toastify";
+import { useActiveChat } from "@/stores/activeChat";
 
 export default function Home() {
   const router = useRouter();
   const [inputMessage, setInputMessage] = useState("");
-  const [chats, setChats] = useState([]);
-  const [activeItem, setActiveItem] = useState("");
+  const { activeChatId, setActiveChatId } = useActiveChatID();
+  const { setChatIDs, chatIDs } = useUserChatsStore();
+  const { setActiveChat, addNewMessage } = useActiveChat();
 
   const [token, sessionInformation] = useAuth();
+
+  useEffect(() => {
+    if (!sessionInformation) {
+      return;
+    }
+
+    const fetchChats = async () => {
+      if (activeChatId === "") {
+        return;
+      }
+
+      try {
+        const response = await axios.get(
+          process.env.NEXT_PUBLIC_API_URL + `/chats/${activeChatId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        const chat = response.data.data;
+        setActiveChat(chat);
+      } catch (error: any) {
+        console.log(error);
+      }
+    };
+
+    fetchChats();
+  }, [activeChatId, sessionInformation, token]);
 
   if (!sessionInformation) {
     return null;
@@ -30,60 +58,86 @@ export default function Home() {
     router.push("/dashboard");
   }
 
-  const deleteChat = (id) => {
-    setChats(chats.filter((chat) => chat.id !== id));
-    if (activeItem === `Chat ${id}`) {
-      setActiveItem("");
-    }
-  };
   const handleKeyPress = (e: KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   };
-  const startNewChat = (message) => {
-    const newChat = {
-      id: chats.length + 1,
-      name: `Chat ${chats.length + 1}`,
-      messages: [
-        { text: message, sender: "user" },
-        {
-          text: dummyResponses[
-            Math.floor(Math.random() * dummyResponses.length)
-          ],
-          sender: "ai",
-        },
-      ],
-    };
-    setChats([...chats, newChat]);
-    setActiveItem(newChat.name);
-    setInputMessage("");
-  };
-  const sendMessage = () => {
-    if (inputMessage.trim()) {
-      if (activeItem === "") {
-        startNewChat(inputMessage);
-      } else {
-        const updatedChats = chats.map((chat) => {
-          if (chat.name === activeItem) {
-            const userMessage = { text: inputMessage, sender: "user" };
-            const aiResponse = {
-              text: dummyResponses[
-                Math.floor(Math.random() * dummyResponses.length)
-              ],
-              sender: "ai",
-            };
-            return {
-              ...chat,
-              messages: [...chat.messages, userMessage, aiResponse],
-            };
+
+  const sendMessage = async () => {
+    if (inputMessage.trim() === "") {
+      return;
+    }
+
+    const body =
+      activeChatId === ""
+        ? {
+            message: inputMessage,
+            user_email: sessionInformation.email,
           }
-          return chat;
-        });
-        setChats(updatedChats);
-        setInputMessage("");
+        : {
+            message: inputMessage,
+            chat_id: activeChatId,
+            user_email: sessionInformation.email,
+          };
+
+    try {
+      const response = await axios.post(
+        process.env.NEXT_PUBLIC_API_URL + `/add-message`,
+        body,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const data = response.data;
+
+      if (activeChatId === "") {
+        setChatIDs([
+          ...chatIDs,
+          {
+            id: data.chat_id,
+            title: inputMessage.slice(0, 10),
+          },
+        ]);
       }
+
+      setActiveChatId(data.chat_id);
+      addNewMessage({
+        message: inputMessage,
+        sender: "human",
+      });
+      setInputMessage("");
+
+      await getBotMessage(data.chat_id);
+    } catch (error: any) {
+      toast.error(error.response.data.message);
+      console.log(error);
+    }
+  };
+
+  const getBotMessage = async (id: string) => {
+    try {
+      const body = {
+        chat_id: id,
+      };
+      const response = await axios.post(
+        process.env.NEXT_PUBLIC_API_URL + `/generate-response`,
+        body,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const data = response.data;
+      const messageObj = data.messageObject as Message;
+      addNewMessage(messageObj);
+    } catch (error: any) {
+      toast.error(error.response.data.message);
+      console.log(error);
     }
   };
 

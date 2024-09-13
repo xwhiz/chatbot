@@ -6,8 +6,12 @@ import { useChatsStore } from "@/stores/chats";
 import { FaTimes } from "react-icons/fa";
 import { FaTrash, FaChevronDown } from "react-icons/fa6";
 import { User, Users, MessageSquare, Upload, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCookies } from "next-client-cookies";
 
 export function Sidebar() {
+  const router = useRouter();
+  const cookies = useCookies();
   const { isOpen } = useSidebarStore();
   const [role, setRole] = useState("user");
   const { chats } = useChatsStore();
@@ -92,7 +96,10 @@ export function Sidebar() {
       <hr className="w-full my-1" />
 
       <button
-        onClick={() => console.log("logout")}
+        onClick={() => {
+          cookies.remove("token");
+          router.push("/login");
+        }}
         className="bg-transparent border border-red-500 text-red-500 px-4 py-2 rounded w-full hover:bg-red-500 hover:text-white transition-colors"
       >
         Logout

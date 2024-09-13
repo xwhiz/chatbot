@@ -4,6 +4,7 @@ import { FaArrowCircleUp } from "react-icons/fa";
 import WithSidebar from "@/layouts/WithSidebar";
 import { useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
+import Chats from "../components/Chats/Chats";
 
 const dummyResponses = [
   "That's an interesting point. Can you elaborate?",
@@ -28,8 +29,6 @@ export default function Home() {
   if (sessionInformation.role === "admin") {
     router.push("/dashboard");
   }
-
-  console.log(sessionInformation);
 
   const deleteChat = (id) => {
     setChats(chats.filter((chat) => chat.id !== id));
@@ -90,7 +89,7 @@ export default function Home() {
 
   return (
     <WithSidebar>
-      {/* <Chats chats={messages} /> */}
+      <Chats />
 
       <div className="p-4 border-t">
         <div className="relative">
@@ -98,7 +97,7 @@ export default function Home() {
             type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyUp={handleKeyPress}
             className="w-full p-2 pr-12 border rounded"
             placeholder={"Type your message..."}
           />

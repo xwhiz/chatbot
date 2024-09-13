@@ -7,7 +7,7 @@ type Action = {
   setActiveChatId: (id: string) => void;
 };
 
-export const useActiveChatStore = create<State & Action>((set) => ({
+export const useActiveChatID = create<State & Action>((set) => ({
   activeChatId: "",
   setActiveChatId: (id) => set({ activeChatId: id }),
 }));

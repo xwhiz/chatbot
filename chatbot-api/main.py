@@ -1,7 +1,8 @@
 from fastapi import Body, FastAPI, Header, Response, status, Request
-from typing import Annotated, Optional
+from typing import Annotated
 from db_lifespan import db_lifespan
 from fastapi.middleware.cors import CORSMiddleware
+from bson import ObjectId
 
 from models import User, Chat
 from auth import sign_jwt, decode_jwt
@@ -42,6 +43,10 @@ async def verify_token(request, call_next):
         return Response(status_code=status.HTTP_401_UNAUTHORIZED)
 
     token = authorization.split(" ")[1]
+
+    if token == "undefined":
+        return Response(status_code=status.HTTP_401_UNAUTHORIZED)
+
     payload = decode_jwt(token)
 
     if not payload:
@@ -171,6 +176,7 @@ async def add_message(
     if chat_id is None:
         # we need to create a new chat
         chat = Chat(
+            title=message[:10],
             user_email=user_email,
             messages=[
                 {
@@ -194,11 +200,11 @@ async def add_message(
         return {
             "success": True,
             "message": "Chat created successfully",
-            "chat_id": chat.chat_id,
+            "chat_id": str(result.inserted_id),
         }
 
     # we need to update an existing chat
-    chat = await app.database["chats"].find_one({"chat_id": chat_id})
+    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
 
     if not chat:
         response.status_code = status.HTTP_404_NOT_FOUND
@@ -212,8 +218,7 @@ async def add_message(
     )
 
     result = await app.database["chats"].update_one(
-        {"chat_id": chat_id},
-        {"$set": {"messages": chat["messages"]}},
+        {"_id": ObjectId(chat_id)}, {"$set": chat}
     )
 
     if not result:
@@ -228,16 +233,50 @@ async def add_message(
     return {"success": True, "message": "Chat updated successfully", "chat_id": chat_id}
 
 
-# I want this as a stream response from the bot
-@app.get("/bot-response")
-async def bot_response(response: Response, chat_id: str = Body(...)):
-    chat = await app.database["chats"].find_one({"chat_id": chat_id})
+@app.post("/generate-response")
+async def bot_response(
+    request: Request,
+    response: Response,
+):
+    body = await request.json()
+    chat_id = body.get("chat_id")
+
+    if chat_id is None:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Chat id is required"}
+
+    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
 
     if not chat:
         response.status_code = status.HTTP_404_NOT_FOUND
         return {"success": False, "message": "Chat not found"}
 
-    return {"success": True, "message": "Bot response", "data": chat["messages"]}
+    message = {
+        "sender": "ai",
+        "message": "Response from the CHATBOT",
+    }
+
+    chat["messages"].append(message)
+
+    result = await app.database["chats"].update_one(
+        {"_id": ObjectId(chat_id)}, {"$set": chat}
+    )
+
+    if not result:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Could not update chat"}
+
+    if not result.acknowledged:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Could not update chat"}
+
+    response.status_code = status.HTTP_200_OK
+    return {
+        "success": True,
+        "message": "Chat updated successfully",
+        "chat_id": chat_id,
+        "messageObject": message,
+    }
 
 
 @app.get("/chats/ids")
@@ -251,10 +290,62 @@ async def get_chat_ids(request: Request, response: Response):
         .to_list(length=1000)
     )
 
-    chat_ids = [chat["chat_id"] for chat in chats]
+    chat_details = [
+        {
+            "id": str(chat["_id"]),
+            "title": chat["title"],
+        }
+        for chat in chats
+    ]
 
     return {
         "success": True,
         "message": "Chat ids retrieved successfully",
-        "data": chat_ids,
+        "data": chat_details,
+    }
+
+
+@app.get("/chats/{chat_id}")
+async def get_chat(request: Request, response: Response, chat_id: str):
+    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
+
+    if not chat:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "Chat not found"}
+
+    chat = {
+        "_id": str(chat["_id"]),
+        "title": chat["title"],
+        "messages": chat["messages"],
+        "user_email": chat["user_email"],
+    }
+
+    return {
+        "success": True,
+        "message": "Chat retrieved successfully",
+        "data": chat,
+    }
+
+
+@app.delete("/chats/{chat_id}")
+async def delete_chat(request: Request, response: Response, chat_id: str):
+    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
+
+    if not chat:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "Chat not found"}
+
+    result = await app.database["chats"].delete_one({"_id": ObjectId(chat_id)})
+
+    if not result:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Could not delete chat"}
+
+    if not result.acknowledged:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Could not delete chat"}
+
+    return {
+        "success": True,
+        "message": "Chat deleted successfully",
     }

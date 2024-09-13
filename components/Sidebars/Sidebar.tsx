@@ -1,21 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useSidebarStore } from "@/stores/sidebar";
-import { useChatsStore } from "@/stores/chats";
 import { FaTimes } from "react-icons/fa";
 import { FaTrash, FaChevronDown } from "react-icons/fa6";
 import { User, Users, MessageSquare, Upload, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCookies } from "next-client-cookies";
 import Swal from "sweetalert2";
+import useAuth from "@/hooks/useAuth";
+import axios, { AxiosError } from "axios";
+import { renderToStaticMarkup } from "react-dom/server";
+import { toast } from "react-toastify";
+import { useUserChatsStore } from "@/stores/userChatsStore";
+import { useActiveChatID } from "@/stores/activeChatID";
 
 export function Sidebar() {
+  const [token, session] = useAuth();
   const router = useRouter();
   const cookies = useCookies();
   const { isOpen } = useSidebarStore();
-  const [role, setRole] = useState("user");
-  const { chats } = useChatsStore();
+  const { chatIDs, setChatIDs } = useUserChatsStore();
+
+  useEffect(() => {
+    const fetchChatIDs = async () => {
+      try {
+        const response = await axios.get(
+          process.env.NEXT_PUBLIC_API_URL + "/chats/ids",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        const chatIDs = response.data.data;
+        setChatIDs(chatIDs);
+      } catch (error: any) {
+        const data = error.response;
+        toast.error(data.message);
+      }
+    };
+
+    fetchChatIDs();
+  }, [session, token]);
 
   const menuItems = {
     admin: [
@@ -27,17 +54,45 @@ export function Sidebar() {
     user: [{ name: "Profile", icon: <User /> }],
   };
 
-  const deleteChat = useChatsStore((state) => state.deleteChat);
-  const addChat = useChatsStore((state) => state.addChat);
+  const handleDeleteChat = async (chatID: string) => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You will not be able to recover this chat!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "No, cancel",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await axios.delete(
+            process.env.NEXT_PUBLIC_API_URL + `/chats/${chatID}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          setChatIDs(chatIDs.filter((id) => id !== chatID));
+          toast.success("Chat deleted successfully!");
+        } catch (error: any) {
+          const data = error.response;
+          toast.error(data.message);
+        }
+      }
+    });
+  };
+
+  if (!session) return null;
 
   return (
     <aside
-      className={`w-64 h-screen py-8 bg-gray-100 text-white fixed z-50 top-0 left-0 flex flex-col gap-4 justify-start items-center transition-transform ease-out duration-300 md:static md:translate-x-0 ${
+      className={`w-64 h-screen pt-8 pb-2 bg-gray-100 text-white fixed z-50 top-0 left-0 flex flex-col gap-4 justify-start items-center transition-transform ease-out duration-300 md:static md:translate-x-0 ${
         isOpen ? "-translate-x-full" : "translate-x-0"
       }`}
     >
       <nav className="w-full mt-4 flex-grow overflow-y-auto">
-        {role === "admin" ? (
+        {session.role === "admin" ? (
           menuItems.admin.map((item) => (
             <a
               key={item.name}
@@ -59,17 +114,20 @@ export function Sidebar() {
             </a>
             <div className="px-4 py-2 text-gray-700 font-semibold">Chats</div>
             <div className="overflow-y-auto">
-              {chats.map((chat) => (
+              {chatIDs.map((chat) => (
                 <div
-                  key={chat.id}
+                  key={chat}
                   className={`flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-200`}
+                  onClick={() => {
+                    useActiveChatID.setState({ activeChatId: chat });
+                  }}
                 >
                   <a href="#" className="flex items-center flex-grow">
                     <MessageSquare className="w-4 h-4" />
-                    <span className="ml-2">{chat.name}</span>
+                    <span className="ml-2">{chat}</span>
                   </a>
                   <button
-                    onClick={() => deleteChat(chat.id)}
+                    onClick={() => handleDeleteChat(chat)}
                     className="text-gray-500 hover:text-red-500"
                   >
                     <FaTrash />
@@ -79,13 +137,9 @@ export function Sidebar() {
             </div>
             <a
               className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 mt-2 hover:cursor-pointer"
-              onClick={() =>
-                addChat({
-                  id: "new-chat",
-                  name: "New Chat",
-                  messages: [],
-                })
-              }
+              onClick={() => {
+                useActiveChatID.setState({ activeChatId: "" });
+              }}
             >
               <Plus className="w-4 h-4" />
               <span className="ml-2">New Chat</span>
@@ -93,8 +147,6 @@ export function Sidebar() {
           </>
         )}
       </nav>
-
-      <hr className="w-full my-1" />
 
       <button
         onClick={() => {
@@ -112,7 +164,7 @@ export function Sidebar() {
             }
           });
         }}
-        className="bg-transparent border border-red-500 text-red-500 px-4 py-2 rounded w-full hover:bg-red-500 hover:text-white transition-colors"
+        className="bg-transparent text-red-500 px-4 py-2 w-full hover:bg-red-500 hover:text-white transition-colors"
       >
         Logout
       </button>

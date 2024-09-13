@@ -106,15 +106,13 @@ async def login_user(
     return {
         "success": True,
         "message": "User logged in successfully",
-        "data": {
-            "token": sign_jwt(
-                {
-                    "name": user["name"],
-                    "email": user["email"],
-                    "role": user["role"],
-                }
-            )
-        },
+        "data": sign_jwt(
+            {
+                "name": user["name"],
+                "email": user["email"],
+                "role": user["role"],
+            }
+        ),
     }
 
 

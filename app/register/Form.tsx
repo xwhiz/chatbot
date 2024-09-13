@@ -19,6 +19,12 @@ export default function Form() {
     const userName = formData.get("userName") as string;
     const userEmail = formData.get("userEmail") as string;
     const userPassword = formData.get("userPassword") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
+
+    if (userPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
 
     if (!userName || !userEmail || !userPassword) {
       toast.error("Please fill all fields");
@@ -118,6 +124,24 @@ export default function Form() {
           type="password"
           id="userPassword"
           name="userPassword"
+          className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
+          placeholder="Password"
+          required
+          value="password"
+        />
+      </div>
+
+      <div className="relative w-full mb-3">
+        <label
+          className="block uppercase text-blueGray-600 text-xs font-bold mb-2"
+          htmlFor="confirmPassword"
+        >
+          Confirm Password
+        </label>
+        <input
+          type="password"
+          id="confirmPassword"
+          name="confirmPassword"
           className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
           placeholder="Password"
           required

@@ -8,6 +8,7 @@ import { FaTrash, FaChevronDown } from "react-icons/fa6";
 import { User, Users, MessageSquare, Upload, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCookies } from "next-client-cookies";
+import Swal from "sweetalert2";
 
 export function Sidebar() {
   const router = useRouter();
@@ -97,8 +98,19 @@ export function Sidebar() {
 
       <button
         onClick={() => {
-          cookies.remove("token");
-          router.push("/login");
+          Swal.fire({
+            title: "Are you sure?",
+            text: "You will be logged out.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Yes, logout",
+            cancelButtonText: "No, cancel",
+          }).then((result) => {
+            if (result.isConfirmed) {
+              cookies.remove("token");
+              router.push("/login");
+            }
+          });
         }}
         className="bg-transparent border border-red-500 text-red-500 px-4 py-2 rounded w-full hover:bg-red-500 hover:text-white transition-colors"
       >

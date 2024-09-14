@@ -109,12 +109,12 @@ export default function Chats() {
             },
           }
         );
-        const users = response.data.data;
-        const sortedUsers = users.sort(
+        const records = response.data.data;
+        const sortedRecords = records.sort(
           (a: any, b: any) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
-        setChats(sortedUsers);
+        setChats(sortedRecords);
       } catch (error: any) {
         const data = error.response;
         if (data) {

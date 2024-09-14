@@ -1,5 +1,7 @@
 "use client";
 
+import { useActiveChat } from "@/stores/activeChat";
+import { useActiveChatID } from "@/stores/activeChatID";
 import axios from "axios";
 import { useCookies } from "next-client-cookies";
 import { useRouter } from "next/navigation";
@@ -9,6 +11,8 @@ import { toast } from "react-toastify";
 export default function Form() {
   const cookies = useCookies();
   const router = useRouter();
+  const { setActiveChat } = useActiveChat();
+  const { setActiveChatId } = useActiveChatID();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -41,6 +45,15 @@ export default function Form() {
       cookies.set("token", token, {
         expires: new Date(data.expires),
       });
+
+      setActiveChatId("");
+      setActiveChat({
+        id: "",
+        title: "",
+        user_email: "",
+        messages: [],
+      });
+
       router.push("/");
     } catch (error) {
       const data = (error as any).response.data;

@@ -5,10 +5,14 @@ import { FormEvent } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { useCookies } from "next-client-cookies";
+import { useActiveChat } from "@/stores/activeChat";
+import { useActiveChatID } from "@/stores/activeChatID";
 
 export default function Form() {
   const router = useRouter();
   const cookies = useCookies();
+  const { setActiveChat } = useActiveChat();
+  const { setActiveChatId } = useActiveChatID();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -62,6 +66,15 @@ export default function Form() {
       cookies.set("token", token, {
         expires: new Date(data.expires),
       });
+
+      setActiveChatId("");
+      setActiveChat({
+        id: "",
+        title: "",
+        user_email: "",
+        messages: [],
+      });
+
       router.push("/");
     } catch (error) {
       const data = (error as any).response.data;
@@ -91,7 +104,6 @@ export default function Form() {
           className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
           placeholder="e.g. John Doe"
           required
-          value="John Doe"
         />
       </div>
 
@@ -109,7 +121,6 @@ export default function Form() {
           className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
           placeholder="e.g. john.doe@gmail.com"
           required
-          value="a3@b.com"
         />
       </div>
 
@@ -127,7 +138,6 @@ export default function Form() {
           className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
           placeholder="Password"
           required
-          value="password"
         />
       </div>
 
@@ -145,7 +155,6 @@ export default function Form() {
           className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
           placeholder="Password"
           required
-          value="password"
         />
       </div>
 

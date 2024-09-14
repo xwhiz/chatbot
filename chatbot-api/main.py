@@ -349,3 +349,33 @@ async def delete_chat(request: Request, response: Response, chat_id: str):
         "success": True,
         "message": "Chat deleted successfully",
     }
+
+
+# TODO: pagination required
+@app.get("/users")
+async def get_users(request: Request, response: Response):
+
+    # if it's admin, allow else return unauthorized
+    payload = request.state.payload
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    users = await app.database["users"].find().to_list(length=1000)
+
+    users = [
+        {
+            "_id": str(user["_id"]),
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+            "created_at": user["created_at"],
+        }
+        for user in users
+    ]
+
+    return {
+        "success": True,
+        "message": "Users retrieved successfully",
+        "data": users,
+    }

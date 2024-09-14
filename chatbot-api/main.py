@@ -352,7 +352,9 @@ async def delete_chat(request: Request, response: Response, chat_id: str):
 
 
 @app.delete("/users/{user_id}")
-async def delete_user(request: Request, response: Response, user_id: str):
+async def delete_user_and_all_their_chats(
+    request: Request, response: Response, user_id: str
+):
     payload = request.state.payload
 
     if payload["role"] != "admin":
@@ -366,6 +368,9 @@ async def delete_user(request: Request, response: Response, user_id: str):
         return {"success": False, "message": "User not found"}
 
     result = await app.database["users"].delete_one({"_id": ObjectId(user_id)})
+
+    # delete all the chats of the user
+    await app.database["chats"].delete_many({"user_email": user["email"]})
 
     if not result:
         response.status_code = status.HTTP_400_BAD_REQUEST

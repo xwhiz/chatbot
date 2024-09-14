@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { FaCopy } from "react-icons/fa6";
 import { useActiveChat } from "@/stores/activeChat";
 
-export default function Chats() {
+export default function MessagesFromActiveChatState() {
   const chatContainer = useRef<HTMLDivElement>(null);
   const { chat } = useActiveChat();
 
@@ -20,13 +20,17 @@ export default function Chats() {
       className="container mx-auto p-4 md:p-6 lg:p-8 overflow-y-auto scrollbar flex-1"
       ref={chatContainer}
     >
-      <h1 className="text-4xl font-bold text-center my-8">
-        Welcome to P. Chatbot
-      </h1>
+      {chat.messages.length === 0 && (
+        <>
+          <h1 className="text-4xl font-bold text-center my-8">
+            Welcome to P. Chatbot
+          </h1>
 
-      <p className="text-xl text-center">
-        This is a chatbot application built with Next.js and Zustand.
-      </p>
+          <p className="text-xl text-center">
+            Start a conversation by typing a message in the input box below.
+          </p>
+        </>
+      )}
 
       <div className="flex flex-col gap-4 mt-8">
         {chat.messages.map((m, i) => (

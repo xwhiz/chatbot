@@ -4,7 +4,7 @@ import { FaArrowCircleUp } from "react-icons/fa";
 import WithSidebar from "@/layouts/WithSidebar";
 import { useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
-import Chats from "../components/Chats/Chats";
+import MessagesFromActiveChatState from "../components/Chats/MessagesFromActiveChatState";
 import { Message } from "@/stores/activeChat";
 import { useActiveChatID } from "@/stores/activeChatID";
 import axios from "axios";
@@ -143,7 +143,7 @@ export default function Home() {
 
   return (
     <WithSidebar>
-      <Chats />
+      <MessagesFromActiveChatState />
 
       <div className="p-4 border-t">
         <div className="relative">

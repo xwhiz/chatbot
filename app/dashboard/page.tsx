@@ -104,7 +104,9 @@ export default function Dashboard() {
           </article>
           <article className="flex flex-col gap-2 justify-center items-center w-full bg-white p-8 rounded shadow-lg">
             <p>Total Chats</p>
-            <h3 className="text-3xl font-semibold">$10,000</h3>
+            <h3 className="text-3xl font-semibold">
+              {new Intl.NumberFormat().format(chats.length)}
+            </h3>
           </article>
         </div>
 

@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import Swal from "sweetalert2";
 
 type Chat = {
   _id: string;
@@ -140,6 +141,37 @@ export default function Chats() {
   if (!session) return null;
   if (session.role !== "admin") router.push("/");
 
+  const handleDelete = async (id: string) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You are deleting users data, you won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "No, cancel!",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await axios.delete(process.env.NEXT_PUBLIC_API_URL + `/chats/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      toast.success("Chat deleted successfully");
+
+      const newChats = chats.filter((chat) => chat._id !== id);
+      setChats(newChats);
+    } catch (error: any) {
+      const data = error.response;
+      if (data) {
+        console.log(data.message);
+        toast.error(data.message);
+      }
+    }
+  };
+
   return (
     <WithSidebar>
       <div className="container mx-auto p-4 h-full overflow-auto scrollbar">
@@ -164,7 +196,10 @@ export default function Chats() {
                 >
                   View Conversation
                 </Link>
-                <button className="text-red-500 ml-2 hover:underline border-none bg-transparent">
+                <button
+                  className="text-red-500 ml-2 hover:underline border-none bg-transparent"
+                  onClick={() => handleDelete(row._id)}
+                >
                   Delete
                 </button>
               </TableCell>

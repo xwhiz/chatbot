@@ -46,7 +46,6 @@ export default function CustomTable<T>({
   totalRecords,
   handleChangePage,
   handleChangeRowsPerPage,
-  emptyRows,
   page,
   rowsPerPage,
 }: {
@@ -56,7 +55,6 @@ export default function CustomTable<T>({
   totalRecords: number;
   handleChangePage: (event: unknown, newPage: number) => void;
   handleChangeRowsPerPage: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  emptyRows: number;
   page: number;
   rowsPerPage: number;
 }) {
@@ -130,15 +128,6 @@ export default function CustomTable<T>({
                   </TableRow>
                 );
               })}
-              {emptyRows > 0 && (
-                <TableRow
-                  style={{
-                    height: 53 * emptyRows,
-                  }}
-                >
-                  <TableCell colSpan={6} />
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </TableContainer>

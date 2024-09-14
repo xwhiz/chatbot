@@ -121,7 +121,7 @@ export default function Users() {
     };
 
     fetchUsers();
-  }, [session, token]);
+  }, [page, rowsPerPage, session, token]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -133,9 +133,6 @@ export default function Users() {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
-
-  const emptyRows =
-    page > 0 ? Math.max(0, (1 + page) * rowsPerPage - users.length) : 0;
 
   if (!session) return null;
   if (session.role !== "admin") router.push("/");
@@ -171,10 +168,9 @@ export default function Users() {
               </TableCell>
             </>
           )}
-          totalRecords={users.length}
+          totalRecords={totalRecords}
           handleChangePage={handleChangePage}
           handleChangeRowsPerPage={handleChangeRowsPerPage}
-          emptyRows={emptyRows}
           page={page}
           rowsPerPage={rowsPerPage}
         />

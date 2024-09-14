@@ -95,7 +95,7 @@ export default function Users() {
   useEffect(() => {
     if (!session) return;
 
-    const fetchUsers = async () => {
+    const fetchRecords = async () => {
       try {
         const response = await axios.get(
           process.env.NEXT_PUBLIC_API_URL +
@@ -121,7 +121,7 @@ export default function Users() {
       }
     };
 
-    fetchUsers();
+    fetchRecords();
   }, [page, rowsPerPage, session, token]);
 
   const handleChangePage = (event: unknown, newPage: number) => {

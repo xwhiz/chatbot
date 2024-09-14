@@ -18,6 +18,10 @@ export default function Home() {
   const { activeChatId, setActiveChatId } = useActiveChatID();
   const { setChatIDs, chatIDs } = useUserChatsStore();
   const { setActiveChat, addNewMessage } = useActiveChat();
+  const [messageState, setMessageState] = useState<{
+    isGenerating: boolean;
+    message: string;
+  }>({ isGenerating: false, message: "" });
 
   const [token, sessionInformation] = useAuth();
 
@@ -120,30 +124,70 @@ export default function Home() {
 
   const getBotMessage = async (id: string) => {
     try {
-      const body = {
-        chat_id: id,
-      };
-      const response = await axios.post(
-        process.env.NEXT_PUBLIC_API_URL + `/generate-response`,
-        body,
+      class AuthEventSource extends EventSource {
+        constructor(url: string, configuration: any) {
+          super(url, configuration);
+        }
+      }
+
+      const eventSource = new AuthEventSource(
+        `${process.env.NEXT_PUBLIC_API_URL}/generate-response?chat_id=${id}&token=${token}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-      const data = response.data;
-      const messageObj = data.messageObject as Message;
-      addNewMessage(messageObj);
+      setMessageState({ isGenerating: true, message: "" });
+
+      let currentMessage = "";
+
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        currentMessage += data.partial_response + " ";
+
+        setMessageState({ isGenerating: false, message: currentMessage });
+      };
+      eventSource.onclose = async () => {
+        try {
+          await axios.post(
+            `${process.env.NEXT_PUBLIC_API_URL}/update-chat`,
+            { chat_id: id, full_message: currentMessage.trim() },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          addNewMessage({
+            message: currentMessage,
+            sender: "ai",
+          });
+
+          setMessageState({ isGenerating: false, message: "" });
+        } catch (error: any) {
+          toast.error(error.response?.data?.message || "An error occurred");
+          console.log(error);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error("EventSource failed:", error);
+        eventSource.close();
+        error.target.onclose();
+
+        setMessageState({ isGenerating: false, message: "" });
+      };
     } catch (error: any) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "An error occurred");
       console.log(error);
     }
   };
 
   return (
     <WithSidebar>
-      <MessagesFromActiveChatState />
+      <MessagesFromActiveChatState message={messageState.message} />
 
       <div className="p-4 border-t">
         <div className="relative">

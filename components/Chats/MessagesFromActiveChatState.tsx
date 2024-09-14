@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { FaCopy } from "react-icons/fa6";
 import { useActiveChat } from "@/stores/activeChat";
 
-export default function MessagesFromActiveChatState() {
+export default function MessagesFromActiveChatState({
+  message,
+}: {
+  message: string | null;
+}) {
   const chatContainer = useRef<HTMLDivElement>(null);
   const { chat } = useActiveChat();
 
@@ -60,6 +64,18 @@ export default function MessagesFromActiveChatState() {
             </button>
           </div>
         ))}
+
+        {message && (
+          <div
+            className={`flex flex-col gap-1 justify-center ${"items-start"}`}
+          >
+            <div
+              className={`px-4 py-3 rounded-lg ${"bg-slate-200 text-slate-800"}`}
+            >
+              {message}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

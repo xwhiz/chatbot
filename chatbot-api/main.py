@@ -1,4 +1,6 @@
+import asyncio
 from datetime import datetime
+import json
 import time
 from fastapi import (
     Body,
@@ -13,8 +15,9 @@ from fastapi import (
     Request,
 )
 from typing import Annotated
+import ollama
 
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from db_lifespan import db_lifespan
 from fastapi.middleware.cors import CORSMiddleware
 from bson import ObjectId
@@ -42,6 +45,7 @@ async def verify_token(request, call_next):
         "/seed/create-admin",
         "/docs",
         "/openapi.json",
+        "/generate-response",
     ]
     if request.url.path in allowed_paths:
         response = await call_next(request)
@@ -248,50 +252,151 @@ async def add_message(
     return {"success": True, "message": "Chat updated successfully", "chat_id": chat_id}
 
 
-@app.post("/generate-response")
-async def bot_response(
-    request: Request,
-    response: Response,
-):
-    body = await request.json()
-    chat_id = body.get("chat_id")
+async def generate_response(chat_id: str):
+    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
+    if not chat:
+        return
+
+    last_human_message = None
+    for message in reversed(chat["messages"]):
+        if message["sender"] == "human":
+            last_human_message = message
+            break
+
+    if not last_human_message:
+        return
+
+    print("Generating response for:", last_human_message["message"])
+
+    stream = ollama.chat(
+        model="llama3.1",
+        messages=[{"role": "user", "content": last_human_message["message"]}],
+        stream=True,
+    )
+
+    for chunk in stream:
+        print(chunk)
+        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk['message']['content']})}\n\n"
+
+    # words = "This is a streaming response from the chatbot.".split()
+    # for word in words:
+    #     yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': word})}\n\n"
+    #     await asyncio.sleep(0.1)  # Simulate delay between words
+
+
+@app.get("/generate-response")
+async def bot_response(chat_id: str, token: str):
+
+    payload = decode_jwt(token)
+
+    if not payload:
+        return Response(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content=json.dumps({"success": False, "message": "Unauthorized"}),
+        )
 
     if chat_id is None:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"success": False, "message": "Chat id is required"}
+        return Response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content=json.dumps({"success": False, "message": "Chat id is required"}),
+        )
 
     chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
-
     if not chat:
-        response.status_code = status.HTTP_404_NOT_FOUND
-        return {"success": False, "message": "Chat not found"}
+        return Response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content=json.dumps({"success": False, "message": "Chat not found"}),
+        )
+
+    return StreamingResponse(generate_response(chat_id), media_type="text/event-stream")
+
+
+@app.post("/update-chat")
+async def update_chat(request: Request):
+    body = await request.json()
+    chat_id = body.get("chat_id")
+    full_message = body.get("full_message")
+
+    if chat_id is None or full_message is None:
+        return Response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content=json.dumps(
+                {"success": False, "message": "Chat id and full message are required"}
+            ),
+        )
 
     message = {
         "sender": "ai",
-        "message": "Response from the CHATBOT",
+        "message": full_message,
     }
-
-    chat["messages"].append(message)
 
     result = await app.database["chats"].update_one(
-        {"_id": ObjectId(chat_id)}, {"$set": chat}
+        {"_id": ObjectId(chat_id)}, {"$push": {"messages": message}}
     )
 
-    if not result:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"success": False, "message": "Could not update chat"}
+    if not result or not result.acknowledged:
+        return Response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content=json.dumps({"success": False, "message": "Could not update chat"}),
+        )
 
-    if not result.acknowledged:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"success": False, "message": "Could not update chat"}
+    return Response(
+        status_code=status.HTTP_200_OK,
+        content=json.dumps(
+            {
+                "success": True,
+                "message": "Chat updated successfully",
+                "chat_id": chat_id,
+                "messageObject": message,
+            }
+        ),
+    )
 
-    response.status_code = status.HTTP_200_OK
-    return {
-        "success": True,
-        "message": "Chat updated successfully",
-        "chat_id": chat_id,
-        "messageObject": message,
-    }
+
+# @app.post("/generate-response")
+# async def bot_response(
+#     request: Request,
+#     response: Response,
+# ):
+#     body = await request.json()
+#     chat_id = body.get("chat_id")
+
+#     if chat_id is None:
+#         response.status_code = status.HTTP_400_BAD_REQUEST
+#         return {"success": False, "message": "Chat id is required"}
+
+#     chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
+
+#     if not chat:
+#         response.status_code = status.HTTP_404_NOT_FOUND
+#         return {"success": False, "message": "Chat not found"}
+
+#     message = {
+#         "sender": "ai",
+#         "message": "Response from the CHATBOT",
+#     }
+
+#     chat["messages"].append(message)
+
+#     result = await app.database["chats"].update_one(
+#         {"_id": ObjectId(chat_id)}, {"$set": chat}
+#     )
+
+#     if not result:
+#         response.status_code = status.HTTP_400_BAD_REQUEST
+#         return {"success": False, "message": "Could not update chat"}
+
+#     if not result.acknowledged:
+#         response.status_code = status.HTTP_400_BAD_REQUEST
+#         return {"success": False, "message": "Could not update chat"}
+
+#     response.status_code = status.HTTP_200_OK
+#     return {
+#         "success": True,
+#         "message": "Chat updated successfully",
+#         "chat_id": chat_id,
+#         "messageObject": message,
+#     }
 
 
 @app.get("/chats/ids")
@@ -791,6 +896,7 @@ async def delete_document(document_id: str, request: Request, response: Response
 
     # Delete the file from disk
     import os
+
     os.remove(file_path)
 
     # Delete the document from MongoDB

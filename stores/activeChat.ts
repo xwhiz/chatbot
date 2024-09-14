@@ -10,6 +10,7 @@ export type ChatType = {
   title: string;
   user_email: string;
   messages: Message[];
+  created_at?: string;
 };
 
 type State = {

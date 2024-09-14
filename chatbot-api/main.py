@@ -371,7 +371,7 @@ async def get_users_count(request: Request, response: Response):
 # i have two query parameters too for this method, page and limit use them to paginate the users
 @app.get("/users")
 async def get_users(
-    request: Request, response: Response, page: int = 1, limit: int = 10
+    request: Request, response: Response, page: int = 0, limit: int = 10
 ):
     # if it's admin, allow else return unauthorized
     payload = request.state.payload
@@ -402,4 +402,115 @@ async def get_users(
         "success": True,
         "message": "Users retrieved successfully",
         "data": users,
+    }
+
+
+@app.post("/chats/count")
+async def get_chats_count(request: Request, response: Response):
+    # if it's admin, allow else return unauthorized
+    payload = request.state.payload
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    body = await request.json()
+    user_id = body.get("user_id")
+
+    if not user_id:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "User id is required"}
+
+    user = await app.database["users"].find_one({"_id": ObjectId(user_id)})
+
+    if not user:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "User not found"}
+
+    user_email = user["email"]
+
+    count = await app.database["chats"].count_documents({"user_email": user_email})
+
+    return {
+        "success": True,
+        "message": "Chats count retrieved successfully",
+        "data": count,
+    }
+
+
+@app.post("/chats")
+async def get_chats(
+    request: Request, response: Response, page: int = 0, limit: int = 10
+):
+    # if it's admin, allow else return unauthorized
+    payload = request.state.payload
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    body = await request.json()
+    user_id = body.get("user_id")
+
+    if not user_id:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "User id is required"}
+
+    user = await app.database["users"].find_one({"_id": ObjectId(user_id)})
+
+    if not user:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "User not found"}
+
+    user_email = user["email"]
+
+    chats = (
+        await app.database["chats"]
+        .find({"user_email": user_email})
+        .skip(page * limit)
+        .limit(limit)
+        .to_list(length=limit)
+    )
+
+    chats = [
+        {
+            "_id": str(chat["_id"]),
+            "title": chat["title"],
+            "user_email": chat["user_email"],
+            "created_at": chat["created_at"],
+        }
+        for chat in chats
+    ]
+
+    return {
+        "success": True,
+        "message": "Chats retrieved successfully",
+        "data": chats,
+    }
+
+
+@app.get("/chats/{chat_id}")
+async def get_single_chat(request: Request, response: Response, chat_id: str):
+    # if it's admin, allow else return unauthorized
+    payload = request.state.payload
+
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
+
+    if not chat:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "Chat not found"}
+
+    chat = {
+        "_id": str(chat["_id"]),
+        "title": chat["title"],
+        "messages": chat["messages"],
+        "user_email": chat["user_email"],
+    }
+
+    return {
+        "success": True,
+        "message": "Chat retrieved successfully",
+        "data": chat,
     }

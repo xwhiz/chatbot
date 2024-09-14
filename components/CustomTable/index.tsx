@@ -114,6 +114,14 @@ export default function CustomTable<T>({
               </TableRow>
             </TableHead>
             <TableBody>
+              {visibleRows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={headCells.length} align="center">
+                    No records found
+                  </TableCell>
+                </TableRow>
+              )}
+
               {visibleRows.map((row, index) => {
                 const labelId = `enhanced-table-checkbox-${index}`;
 

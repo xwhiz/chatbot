@@ -4,10 +4,21 @@ import WithSidebar from "@/layouts/WithSidebar";
 import { CategoryScale } from "chart.js";
 import { Line } from "react-chartjs-2";
 import Chart from "chart.js/auto";
+import { useRouter } from "next/navigation";
+import useAuth from "@/hooks/useAuth";
 
 Chart.register(CategoryScale);
 
 export default function Dashboard() {
+  const router = useRouter();
+  const [token, session] = useAuth();
+
+  if (!session) return null;
+
+  if (session.role !== "admin") {
+    router.push("/");
+  }
+
   return (
     <WithSidebar>
       <div className="container mx-auto p-4 h-full overflow-auto scrollbar">

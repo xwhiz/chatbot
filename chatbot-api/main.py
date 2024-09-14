@@ -386,6 +386,31 @@ async def delete_user_and_all_their_chats(
     }
 
 
+@app.get("/users/all-minimal")
+async def get_all_users_minimal(request: Request, response: Response):
+    payload = request.state.payload
+
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    users = await app.database["users"].find().to_list(length=1000)
+
+    users = [
+        {
+            "_id": str(user["_id"]),
+            "created_at": user["created_at"],
+        }
+        for user in users
+    ]
+
+    return {
+        "success": True,
+        "message": "Users retrieved successfully",
+        "data": users,
+    }
+
+
 @app.get("/users/count")
 async def get_users_count(request: Request, response: Response):
     # if it's admin, allow else return unauthorized
@@ -510,6 +535,32 @@ async def get_chats(
             "_id": str(chat["_id"]),
             "title": chat["title"],
             "user_email": chat["user_email"],
+            "created_at": chat["created_at"],
+        }
+        for chat in chats
+    ]
+
+    return {
+        "success": True,
+        "message": "Chats retrieved successfully",
+        "data": chats,
+    }
+
+
+@app.get("/chats/all/minimal")
+async def get_all_chats_minimal(request: Request, response: Response):
+    # if it's admin, allow else return unauthorized
+    payload = request.state.payload
+
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    chats = await app.database["chats"].find().to_list(length=1000)
+
+    chats = [
+        {
+            "_id": str(chat["_id"]),
             "created_at": chat["created_at"],
         }
         for chat in chats

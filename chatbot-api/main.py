@@ -351,6 +351,36 @@ async def delete_chat(request: Request, response: Response, chat_id: str):
     }
 
 
+@app.delete("/users/{user_id}")
+async def delete_user(request: Request, response: Response, user_id: str):
+    payload = request.state.payload
+
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    user = await app.database["users"].find_one({"_id": ObjectId(user_id)})
+
+    if not user:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "User not found"}
+
+    result = await app.database["users"].delete_one({"_id": ObjectId(user_id)})
+
+    if not result:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Could not delete user"}
+
+    if not result.acknowledged:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Could not delete user"}
+
+    return {
+        "success": True,
+        "message": "User deleted successfully",
+    }
+
+
 @app.get("/users/count")
 async def get_users_count(request: Request, response: Response):
     # if it's admin, allow else return unauthorized

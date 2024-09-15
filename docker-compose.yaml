@@ -4,15 +4,43 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-
     ports:
       - "3000:3000"
-
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
       NEXT_PUBLIC_JWT_SECRET: asdflklasdjflkasjdlfjasdlfjalsdfvcxzvxqwetoyedfdzxcvmzxcvoitoadsfaxdcyxc
-
     volumes:
       - .:/app
-
     restart: unless-stopped
+    depends_on:
+      - api
+
+  api:
+    image: chatbot-api:latest
+    build:
+      context: ./chatbot-api
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/
+      JWT_SECRET: asdflklasdjflkasjdlfjasdlfjalsdfvcxzvxqwetoyedfdzxcvmzxcvoitoadsfaxdcyxc
+      JWT_ALGORITHM: HS256
+      SALT: $2b$12$9vO2O/oUIee.p6zjEOCA7u
+    volumes:
+      - ./chatbot-api:/app
+      - ./chatbot-api/uploaded_documents:/app/uploaded_documents
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:

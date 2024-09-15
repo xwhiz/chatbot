@@ -17,7 +17,7 @@ export default function MessagesFromActiveChatState({
     if (chatContainer.current) {
       chatContainer.current.scrollTop = chatContainer.current.scrollHeight;
     }
-  }, [chat]);
+  });
 
   return (
     <section

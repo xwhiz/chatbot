@@ -53,7 +53,7 @@ export default function ChatPage() {
 
   return (
     <WithSidebar>
-      <MessagesFromActiveChatState />
+      <MessagesFromActiveChatState message={null} />
     </WithSidebar>
   );
 }

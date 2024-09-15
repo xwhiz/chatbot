@@ -6,7 +6,6 @@ import { FaTimes } from "react-icons/fa";
 import { FaTrash, FaChevronDown } from "react-icons/fa6";
 import { User, Users, MessageSquare, Upload, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCookies } from "next-client-cookies";
 import Swal from "sweetalert2";
 import useAuth from "@/hooks/useAuth";
 import axios, { AxiosError } from "axios";
@@ -20,7 +19,6 @@ import Link from "next/link";
 export function Sidebar() {
   const [token, session] = useAuth();
   const router = useRouter();
-  const cookies = useCookies();
   const { isOpen } = useSidebarStore();
   const { activeChatId, setActiveChatId } = useActiveChatID();
   const { chatIDs, setChatIDs } = useUserChatsStore();
@@ -184,7 +182,7 @@ export function Sidebar() {
             cancelButtonText: "No, cancel",
           }).then((result) => {
             if (result.isConfirmed) {
-              cookies.remove("token");
+              localStorage.removeItem("token");
               router.push("/login");
             }
           });

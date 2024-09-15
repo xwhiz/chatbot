@@ -54,6 +54,8 @@ export default function Home() {
     fetchChats();
   }, [activeChatId, sessionInformation, token]);
 
+  console.log(token, sessionInformation);
+
   if (!sessionInformation) {
     return null;
   }
@@ -62,7 +64,7 @@ export default function Home() {
     router.push("/dashboard");
   }
 
-  const handleKeyPress = (e: KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -148,6 +150,8 @@ export default function Home() {
 
         setMessageState({ isGenerating: false, message: currentMessage });
       };
+
+      // @ts-ignore
       eventSource.onclose = async () => {
         try {
           await axios.post(
@@ -175,6 +179,7 @@ export default function Home() {
       eventSource.onerror = (error) => {
         console.error("EventSource failed:", error);
         eventSource.close();
+        // @ts-ignore
         error.target.onclose();
 
         setMessageState({ isGenerating: false, message: "" });

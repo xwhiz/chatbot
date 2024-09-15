@@ -4,13 +4,11 @@ import axios from "axios";
 import { FormEvent } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import { useCookies } from "next-client-cookies";
 import { useActiveChat } from "@/stores/activeChat";
 import { useActiveChatID } from "@/stores/activeChatID";
 
 export default function Form() {
   const router = useRouter();
-  const cookies = useCookies();
   const { setActiveChat } = useActiveChat();
   const { setActiveChatId } = useActiveChatID();
 
@@ -63,9 +61,7 @@ export default function Form() {
 
       const token = data.data.access_token;
 
-      cookies.set("token", token, {
-        expires: new Date(data.expires),
-      });
+      window.localStorage.setItem("token", token);
 
       setActiveChatId("");
       setActiveChat({

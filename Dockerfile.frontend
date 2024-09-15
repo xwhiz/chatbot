@@ -1,0 +1,26 @@
+# Use the official Node.js 18 image as a parent image
+FROM node:18-alpine
+
+# Set the working directory
+WORKDIR /app
+
+# Copy package.json and yarn.lock
+COPY package.json yarn.lock ./
+
+# Install Yarn if it's not already installed in the base image
+RUN apk add --no-cache yarn
+
+# Install dependencies
+RUN yarn install --frozen-lockfile
+
+# Copy the rest of your app's source code
+COPY . .
+
+# Build your Next.js app
+RUN yarn build
+
+# Expose the port Next.js runs on
+EXPOSE 3000
+
+# Run the app
+CMD ["yarn", "start"]

@@ -6,11 +6,14 @@ import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { useActiveChat } from "@/stores/activeChat";
 import { useActiveChatID } from "@/stores/activeChatID";
+import useAuth from "@/hooks/useAuth";
+import Link from "next/link";
 
 export default function Form() {
   const router = useRouter();
   const { setActiveChat } = useActiveChat();
   const { setActiveChatId } = useActiveChatID();
+  const [token, session] = useAuth();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -85,93 +88,106 @@ export default function Form() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="relative w-full mb-3">
-        <label
-          className="block uppercase text-blueGray-600 text-xs font-bold mb-2"
-          htmlFor="userName"
-        >
-          Name
-        </label>
-        <input
-          type="text"
-          id="userName"
-          name="userName"
-          className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
-          placeholder="e.g. John Doe"
-          required
-        />
-      </div>
+    <>
+      {token ? (
+        <div className="text-center mt-6">
+          <Link
+            href="/profile"
+            className="text-slate-800 text-sm font-bold leading-relaxed inline-block py-2 whitespace-nowrap uppercase underline cursor-pointer"
+          >
+            Go to your profile
+          </Link>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          <div className="relative w-full mb-3">
+            <label
+              className="block uppercase text-blueGray-600 text-xs font-bold mb-2"
+              htmlFor="userName"
+            >
+              Name
+            </label>
+            <input
+              type="text"
+              id="userName"
+              name="userName"
+              className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
+              placeholder="e.g. John Doe"
+              required
+            />
+          </div>
 
-      <div className="relative w-full mb-3">
-        <label
-          className="block uppercase text-blueGray-600 text-xs font-bold mb-2"
-          htmlFor="userEmail"
-        >
-          Email
-        </label>
-        <input
-          type="email"
-          id="userEmail"
-          name="userEmail"
-          className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
-          placeholder="e.g. john.doe@gmail.com"
-          required
-        />
-      </div>
+          <div className="relative w-full mb-3">
+            <label
+              className="block uppercase text-blueGray-600 text-xs font-bold mb-2"
+              htmlFor="userEmail"
+            >
+              Email
+            </label>
+            <input
+              type="email"
+              id="userEmail"
+              name="userEmail"
+              className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
+              placeholder="e.g. john.doe@gmail.com"
+              required
+            />
+          </div>
 
-      <div className="relative w-full mb-3">
-        <label
-          className="block uppercase text-blueGray-600 text-xs font-bold mb-2"
-          htmlFor="userPassword"
-        >
-          Password
-        </label>
-        <input
-          type="password"
-          id="userPassword"
-          name="userPassword"
-          className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
-          placeholder="Password"
-          required
-        />
-      </div>
+          <div className="relative w-full mb-3">
+            <label
+              className="block uppercase text-blueGray-600 text-xs font-bold mb-2"
+              htmlFor="userPassword"
+            >
+              Password
+            </label>
+            <input
+              type="password"
+              id="userPassword"
+              name="userPassword"
+              className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
+              placeholder="Password"
+              required
+            />
+          </div>
 
-      <div className="relative w-full mb-3">
-        <label
-          className="block uppercase text-blueGray-600 text-xs font-bold mb-2"
-          htmlFor="confirmPassword"
-        >
-          Confirm Password
-        </label>
-        <input
-          type="password"
-          id="confirmPassword"
-          name="confirmPassword"
-          className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
-          placeholder="Password"
-          required
-        />
-      </div>
+          <div className="relative w-full mb-3">
+            <label
+              className="block uppercase text-blueGray-600 text-xs font-bold mb-2"
+              htmlFor="confirmPassword"
+            >
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              className="border-0 px-3 py-3 placeholder-blueGray-300 text-blueGray-600 bg-white rounded text-sm shadow focus:outline-none focus:ring w-full ease-linear transition-all duration-150"
+              placeholder="Password"
+              required
+            />
+          </div>
 
-      <div className="text-center mt-6">
-        <button
-          className="bg-slate-800 text-white active:bg-slate-600 text-sm font-bold uppercase px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none mr-1 mb-1 w-full ease-linear transition-all duration-150"
-          type="submit"
-        >
-          Create Account
-        </button>
-      </div>
+          <div className="text-center mt-6">
+            <button
+              className="bg-slate-800 text-white active:bg-slate-600 text-sm font-bold uppercase px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none mr-1 mb-1 w-full ease-linear transition-all duration-150"
+              type="submit"
+            >
+              Create Account
+            </button>
+          </div>
 
-      <div className="text-center mt-6">
-        Already have an account?{" "}
-        <a
-          href="/login"
-          className="text-slate-800 text-sm font-bold leading-relaxed inline-block py-2 whitespace-nowrap uppercase underline cursor-pointer"
-        >
-          Login
-        </a>
-      </div>
-    </form>
+          <div className="text-center mt-6">
+            Already have an account?{" "}
+            <a
+              href="/login"
+              className="text-slate-800 text-sm font-bold leading-relaxed inline-block py-2 whitespace-nowrap uppercase underline cursor-pointer"
+            >
+              Login
+            </a>
+          </div>
+        </form>
+      )}
+    </>
   );
 }

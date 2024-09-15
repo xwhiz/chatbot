@@ -46,6 +46,7 @@ async def verify_token(request, call_next):
         "/docs",
         "/openapi.json",
         "/generate-response",
+        "/health",
     ]
     if request.url.path in allowed_paths:
         response = await call_next(request)
@@ -915,3 +916,10 @@ async def delete_document(document_id: str, request: Request, response: Response
         "success": True,
         "message": "Document deleted successfully",
     }
+
+
+# A health endpoint
+@app.get("/health")
+async def health(response: Response):
+    response.status_code = status.HTTP_200_OK
+    return {"status": "ok"}

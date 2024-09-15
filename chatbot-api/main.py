@@ -268,20 +268,19 @@ async def generate_response(chat_id: str):
 
     print("Generating response for:", last_human_message["message"])
 
-    stream = ollama.chat(
-        model="llama3.1",
-        messages=[{"role": "user", "content": last_human_message["message"]}],
-        stream=True,
-    )
+    # stream = ollama.chat(
+    #     model="llama3.1",
+    #     messages=[{"role": "user", "content": last_human_message["message"]}],
+    #     stream=True,
+    # )
 
-    for chunk in stream:
-        print(chunk)
-        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk['message']['content']})}\n\n"
+    # for chunk in stream:
+    #     yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk['message']['content']}).trim()}\n\n"
 
-    # words = "This is a streaming response from the chatbot.".split()
-    # for word in words:
-    #     yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': word})}\n\n"
-    #     await asyncio.sleep(0.1)  # Simulate delay between words
+    words = "This is a streaming response from the chatbot.".split()
+    for word in words:
+        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': word})}\n\n"
+        await asyncio.sleep(0.05)  # Simulate delay between words
 
 
 @app.get("/generate-response")

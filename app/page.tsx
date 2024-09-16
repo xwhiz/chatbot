@@ -54,8 +54,6 @@ export default function Home() {
     fetchChats();
   }, [activeChatId, sessionInformation, token]);
 
-  console.log(token, sessionInformation);
-
   if (!sessionInformation) {
     return null;
   }
@@ -146,7 +144,7 @@ export default function Home() {
 
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        currentMessage += data.partial_response + " ";
+        currentMessage += data.partial_response;
 
         setMessageState({ isGenerating: false, message: currentMessage });
       };

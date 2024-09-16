@@ -1,5 +1,5 @@
 "use client";
-
+import { marked } from "marked";
 import { useEffect, useRef, useState } from "react";
 import { FaCopy } from "react-icons/fa6";
 import { useActiveChat } from "@/stores/activeChat";
@@ -45,14 +45,13 @@ export default function MessagesFromActiveChatState({
             }`}
           >
             <div
-              className={`px-4 py-3 rounded-lg ${
+              className={`px-4 py-3 rounded-lg prose ${
                 m.sender === "human"
                   ? "bg-slate-700 text-white"
                   : "bg-slate-200 text-slate-800"
               }`}
-            >
-              {m.message}
-            </div>
+              dangerouslySetInnerHTML={{ __html: marked.parse(m.message) }}
+            ></div>
 
             <button
               className={`text-sm text-slate-800 ${
@@ -67,13 +66,12 @@ export default function MessagesFromActiveChatState({
 
         {message && (
           <div
-            className={`flex flex-col gap-1 justify-center ${"items-start"}`}
+            className={`flex flex-col gap-1 justify-center prose ${"items-start"}`}
           >
             <div
               className={`px-4 py-3 rounded-lg ${"bg-slate-200 text-slate-800"}`}
-            >
-              {message}
-            </div>
+              dangerouslySetInnerHTML={{ __html: marked.parse(message) }}
+            ></div>
           </div>
         )}
       </div>

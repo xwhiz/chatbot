@@ -15,16 +15,16 @@ from fastapi import (
     Request,
 )
 from typing import Annotated
-import ollama
-
 from fastapi.responses import FileResponse, StreamingResponse
 from db_lifespan import db_lifespan
 from fastapi.middleware.cors import CORSMiddleware
 from bson import ObjectId
-
 from models import User, Chat
 from auth import sign_jwt, decode_jwt
 from utils import hash_password
+
+from vectordb_handle import upload_pdf_to_chroma, delete_file_from_chroma
+from ollama_inference import qa_chain
 
 app = FastAPI(lifespan=db_lifespan)
 
@@ -349,6 +349,9 @@ async def generate_response(chat_id: str):
 
     print("Generating response for:", last_human_message["message"])
 
+    for chunk in qa_chain.stream(last_human_message["message"]):
+        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk}).strip()}\n\n"
+
     # stream = ollama.chat(
     #     model="llama3.1",
     #     messages=[{"role": "user", "content": last_human_message["message"]}],
@@ -356,12 +359,12 @@ async def generate_response(chat_id: str):
     # )
 
     # for chunk in stream:
-    #     yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk['message']['content']}).trim()}\n\n"
+    #     yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk['message']['content']}).strip()}\n\n"
 
-    words = "This is a streaming response from the chatbot.".split()
-    for word in words:
-        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': word})}\n\n"
-        await asyncio.sleep(0.05)  # Simulate delay between words
+    # words = "This is a streaming response from the chatbot.".split()
+    # for word in words:
+    #     yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': word})}\n\n"
+    #     await asyncio.sleep(0.05)  # Simulate delay between words
 
 
 @app.get("/generate-response")
@@ -466,10 +469,7 @@ async def update_chat(request: Request):
 #         response.status_code = status.HTTP_400_BAD_REQUEST
 #         return {"success": False, "message": "Could not update chat"}
 
-#     if not result.acknowledged:
-#         response.status_code = status.HTTP_400_BAD_REQUEST
-#         return {"success": False, "message": "Could not update chat"}
-
+#     if not result.aupsert_to_chroma
 #     response.status_code = status.HTTP_200_OK
 #     return {
 #         "success": True,
@@ -889,6 +889,8 @@ async def create_document(
         "created_at": datetime.now(),
     }
 
+    upload_pdf_to_chroma(file_location)
+
     result = await app.database["documents"].insert_one(document)
 
     if not result:
@@ -973,6 +975,8 @@ async def delete_document(document_id: str, request: Request, response: Response
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="File path not found"
         )
+
+    delete_file_from_chroma(file_path)
 
     # Delete the file from disk
     import os

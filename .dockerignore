@@ -5,4 +5,5 @@
 scripts
 *Dockerfile*
 node_modules
+.next
 .env*

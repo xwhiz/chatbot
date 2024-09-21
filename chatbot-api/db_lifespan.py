@@ -8,9 +8,6 @@ from urllib.parse import quote
 async def db_lifespan(app: FastAPI):
     CONNECTION_STRING = config("MONGODB_URI")
 
-    password = quote("123@pakistan")
-    CONNECTION_STRING = f"mongodb+srv://whizhamza:{password}@cluster0.kxfut.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-
     app.mongodb_client = AsyncIOMotorClient(CONNECTION_STRING)
     app.database = app.mongodb_client.get_database("chatbot")
 

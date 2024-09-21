@@ -69,3 +69,4 @@ archive.zip
 *.sqlite
 vector_doc_db/
 uploded_documents
+*.pdf

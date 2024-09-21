@@ -8,3 +8,4 @@ langchain_chroma
 langchain_community
 langchain_ollama
 langchain_huggingface
+pypdf

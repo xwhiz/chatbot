@@ -7,7 +7,7 @@ import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FaFileCirclePlus, FaFolderPlus } from "react-icons/fa6";
+import { FaFileCirclePlus, FaFolderPlus, FaSpinner } from "react-icons/fa6";
 import "react-super-responsive-table/dist/SuperResponsiveTableStyle.css";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
@@ -41,6 +41,7 @@ export default function Documents() {
   const [records, setRecords] = useState<Document[]>([]);
   const [token, session] = useAuth();
   const [totalRecords, setTotalRecords] = useState(0);
+  const [uploading, setUploading] = useState(false);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -208,6 +209,7 @@ export default function Documents() {
     formData.append("title", title);
     formData.append("file", file);
 
+    setUploading(true);
     try {
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/documents`,
@@ -247,6 +249,8 @@ export default function Documents() {
         console.log(data.message);
         toast.error(data.message);
       }
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -283,13 +287,22 @@ export default function Documents() {
           </h1>
 
           <button
-            className="flex items-center justify-between gap-2 p-2 px-4 rounded text-white bg-blue-500 hover:bg-blue-600 cursor-pointer"
+            className="flex items-center justify-between gap-2 p-2 px-4 rounded text-white bg-blue-500 hover:bg-blue-600 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={(e) => {
               e.preventDefault();
               handleCreateDocument();
             }}
+            disabled={uploading}
           >
-            <FaFileCirclePlus /> Create Document
+            {uploading ? (
+              <>
+                <FaSpinner className="animate-spin" /> Uploading
+              </>
+            ) : (
+              <>
+                <FaFileCirclePlus /> Create Document
+              </>
+            )}
           </button>
         </div>
 

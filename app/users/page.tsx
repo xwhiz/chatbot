@@ -5,19 +5,9 @@ import WithSidebar from "@/layouts/WithSidebar";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import Paper from "@mui/material/Paper";
-import Box from "@mui/material/Box";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TablePagination from "@mui/material/TablePagination";
-import TableRow from "@mui/material/TableRow";
-import TableSortLabel from "@mui/material/TableSortLabel";
-import { visuallyHidden } from "@mui/utils";
 import CustomTable, { HeadCell } from "@/components/CustomTable";
 import Swal from "sweetalert2";
 
@@ -204,18 +194,22 @@ export default function Users() {
                 {new Date(row.created_at).toLocaleString()}
               </TableCell>
               <TableCell align="right">
-                <Link
-                  href={`/chats/${row._id}`}
-                  className="text-blue-500 hover:underline"
-                >
-                  See Chats
-                </Link>
-                <button
-                  className="text-red-500 ml-2 hover:underline border-none bg-transparent"
-                  onClick={() => handleDelete(row._id)}
-                >
-                  Delete
-                </button>
+                {row.role !== "admin" && (
+                  <>
+                    <Link
+                      href={`/chats/${row._id}`}
+                      className="text-blue-500 hover:underline"
+                    >
+                      See Chats
+                    </Link>
+                    <button
+                      className="text-red-500 ml-2 hover:underline border-none bg-transparent"
+                      onClick={() => handleDelete(row._id)}
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
               </TableCell>
             </>
           )}

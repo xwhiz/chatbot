@@ -877,6 +877,12 @@ async def create_document(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Only PDF files are allowed"
         )
 
+    import os
+
+    # Create the directory if it doesn't exist
+    if not os.path.exists("uploaded_documents"):
+        os.makedirs("uploaded_documents")
+
     # Save file to disk
     file_location = f"uploaded_documents/{time.time()}{file.filename}"
     with open(file_location, "wb+") as file_object:

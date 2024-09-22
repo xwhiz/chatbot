@@ -10,7 +10,6 @@ def upload_pdf_to_chroma(pdf_path: str):
 
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-mpnet-base-v2",
-        model_kwargs={"device": "cuda"},
     )
 
     persist_directory = config("VECTOR_DOC_DB_PATH")

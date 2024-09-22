@@ -9,7 +9,6 @@ services:
         NEXT_PUBLIC_JWT_SECRET: asdflklasdjflkasjdlfjasdlfjalsdfvcxzvxqwetoyedfdzxcvmzxcvoitoadsfaxdcyxc
     ports:
       - "3000:3000"
-
     volumes:
       - .:/app
     restart: unless-stopped
@@ -23,6 +22,7 @@ services:
       dockerfile: Dockerfile.api
     ports:
       - "8000:8000"
+      - "11435:11434" # Added Ollama port
     environment:
       MONGODB_URI: mongodb://mongodb:27017/
       JWT_SECRET: asdflklasdjflkasjdlfjasdlfjalsdfvcxzvxqwetoyedfdzxcvmzxcvoitoadsfaxdcyxc
@@ -38,7 +38,7 @@ services:
   mongodb:
     image: mongo:latest
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - mongodb_data:/data/db
     restart: unless-stopped

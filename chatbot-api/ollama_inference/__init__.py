@@ -1,1 +1,1 @@
-from .infer_llama_chain import qa_chain
+from .infer_llama_chain import initialize_qa_chain

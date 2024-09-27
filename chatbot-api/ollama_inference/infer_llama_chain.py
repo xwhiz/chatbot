@@ -1,54 +1,40 @@
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import ChatOllama
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema import StrOutputParser
 from langchain.prompts import ChatPromptTemplate
-from decouple import config
 
 
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-mpnet-base-v2",
-)
+def initialize_qa_chain(llm: ChatOllama, retriever):
+    def format_docs(docs):
+        return "\n\n".join(doc.page_content for doc in docs)
 
-persist_directory = config("VECTOR_DOC_DB_PATH")
+    RAG_TEMPLATE = """
+    You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
 
-vectordb = Chroma(embedding_function=embeddings, persist_directory=persist_directory)
+    <context>
+    {context}
+    </context>
 
-# llm from ollama
-llm = ChatOllama(
-    model="llama3.1",
-)
+    Answer the following question:
 
-# retriever
-retriever = vectordb.as_retriever(search_method="cosine", top_k=3, threshold=0.5)
+    {question}"""
+
+    rag_prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
+
+    qa_chain = (
+        {"context": retriever | format_docs, "question": RunnablePassthrough()}
+        | rag_prompt
+        | llm
+        | StrOutputParser()
+    )
+
+    return qa_chain
 
 
-# Convert loaded documents into strings by concatenating their content
-# and ignoring metadata
-def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
-
-
-RAG_TEMPLATE = """
-You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
-
-<context>
-{context}
-</context>
-
-Answer the following question:
-
-{question}"""
-
-rag_prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
-
-qa_chain = (
-    {"context": retriever | format_docs, "question": RunnablePassthrough()}
-    | rag_prompt
-    | llm
-    | StrOutputParser()
-)
+# Usage example (can be in another file)
+# with qa_chain_context() as qa_chain:
+#     result = qa_chain.invoke("Your question here")
+#     print(result)
 
 
 # # question = "Write snake game in python?"
@@ -59,3 +45,15 @@ qa_chain = (
 # # print(result)
 # for chunk in qa_chain.stream(question):
 #     print(chunk, end="", flush=True)
+
+# query = """"
+# What is the Anatomy of the Stomach?
+#  """
+# result = vector_store.similarity_search_with_score(query, k=5)
+# # result = vector_store.similarity_search(query, k=1)
+# print("############################################################")
+# print("############################################################")
+# print("############################################################")
+# for res in result:
+#     print(res)
+#     print("***********************************************************")

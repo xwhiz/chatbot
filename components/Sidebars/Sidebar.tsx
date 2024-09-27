@@ -137,6 +137,7 @@ export function Sidebar() {
                   onClick={(e: any) => {
                     if (!e.target.classList.contains("trigger")) return;
                     useActiveChatID.setState({ activeChatId: chat.id });
+                    router.replace("/");
                   }}
                 >
                   <MessageSquare className="trigger w-4 h-4" />
@@ -162,6 +163,7 @@ export function Sidebar() {
                   messages: [],
                 });
                 useActiveChatID.setState({ activeChatId: "" });
+                router.replace("/");
               }}
             >
               <Plus className="w-4 h-4" />

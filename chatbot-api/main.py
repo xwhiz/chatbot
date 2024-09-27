@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime
 import json
 import time
@@ -16,17 +15,18 @@ from fastapi import (
 )
 from typing import Annotated
 from fastapi.responses import FileResponse, StreamingResponse
-from db_lifespan import db_lifespan
 from fastapi.middleware.cors import CORSMiddleware
 from bson import ObjectId
+from decouple import config
+
+from lifespan import lifespan
+from utils import hash_password
 from models import User, Chat
 from auth import sign_jwt, decode_jwt
-from utils import hash_password
+from vectordb_handle import upsert_pdf_to_qdrant, delete_file_from_qdrant
 
-from vectordb_handle import upload_pdf_to_chroma, delete_file_from_chroma
-from ollama_inference import qa_chain
+app = FastAPI(lifespan=lifespan)
 
-app = FastAPI(lifespan=db_lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -349,7 +349,10 @@ async def generate_response(chat_id: str):
 
     print("Generating response for:", last_human_message["message"])
 
-    for chunk in qa_chain.stream(last_human_message["message"]):
+    # # print(retriever.invoke(last_human_message["message"]))
+    # print(ensemble_retriever.invoke(last_human_message["message"]))
+
+    for chunk in app.qa_chain.stream(last_human_message["message"]):
         yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk}).strip()}\n\n"
 
     # stream = ollama.chat(
@@ -877,7 +880,11 @@ async def create_document(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Only PDF files are allowed"
         )
 
+    print("File name:", file.filename)
+
     import os
+
+    print("received file:", file.filename)
 
     # Create the directory if it doesn't exist
     if not os.path.exists("uploaded_documents"):
@@ -885,8 +892,10 @@ async def create_document(
 
     # Save file to disk
     file_location = f"uploaded_documents/{time.time()}{file.filename}"
-    with open(file_location, "wb+") as file_object:
-        file_object.write(file.file.read())
+    with open(file_location, "wb+") as file_obj:
+        file_obj.write(await file.read())
+
+    print("File saved to:", file_location)
 
     # Create document in MongoDB
     document = {
@@ -895,7 +904,9 @@ async def create_document(
         "created_at": datetime.now(),
     }
 
-    upload_pdf_to_chroma(file_location)
+    print("Uploading to Qdrant")
+    upsert_pdf_to_qdrant(app.vector_store, file_location)
+    print("Uploaded to Qdrant")
 
     result = await app.database["documents"].insert_one(document)
 
@@ -982,7 +993,7 @@ async def delete_document(document_id: str, request: Request, response: Response
             status_code=status.HTTP_400_BAD_REQUEST, detail="File path not found"
         )
 
-    delete_file_from_chroma(file_path)
+    delete_file_from_qdrant(app.client, config("COLLECTION_NAME"), file_path)
 
     # Delete the file from disk
     import os

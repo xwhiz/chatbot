@@ -54,7 +54,7 @@ env3.*
 .env
 docs_build
 site_build
-venv
+env
 docs.zip
 archive.zip
 

@@ -8,5 +8,6 @@ langchain_chroma
 langchain_community
 langchain_ollama
 langchain_huggingface
+langchain_qdrant
 pypdf
 qdrant_client

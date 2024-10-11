@@ -26,7 +26,7 @@ from models import User, Chat
 from auth import decode_jwt
 from vectordb_handle import upsert_pdf_to_qdrant, delete_file_from_qdrant
 
-from .routers import auth
+from routers import auth
 
 app = FastAPI(lifespan=lifespan)
 

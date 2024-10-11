@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Response, status, Body, Request
-from ..models.user import User
-from ..utils import hash_password
-from ..auth import sign_jwt
+from models.user import User
+from utils import hash_password
+from auth import sign_jwt
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

@@ -11,6 +11,7 @@ import axios from "axios";
 import { useUserChatsStore } from "@/stores/userChatsStore";
 import { toast } from "react-toastify";
 import { useActiveChat } from "@/stores/activeChat";
+import { useIsGeneratingStore } from "@/stores/useIsGeneratingStore";
 
 export default function Home() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function Home() {
     isGenerating: boolean;
     message: string;
   }>({ isGenerating: false, message: "" });
+  const { setIsGenerating } = useIsGeneratingStore();
 
   const [token, sessionInformation] = useAuth();
 
@@ -66,6 +68,7 @@ export default function Home() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+      setIsGenerating(true);
     }
   };
 
@@ -168,6 +171,7 @@ export default function Home() {
           });
 
           setMessageState({ isGenerating: false, message: "" });
+          setIsGenerating(false);
         } catch (error: any) {
           toast.error(error.response?.data?.message || "An error occurred");
           console.log(error);
@@ -181,6 +185,7 @@ export default function Home() {
         error.target.onclose();
 
         setMessageState({ isGenerating: false, message: "" });
+        setIsGenerating(false);
       };
     } catch (error: any) {
       toast.error(error.response?.data?.message || "An error occurred");

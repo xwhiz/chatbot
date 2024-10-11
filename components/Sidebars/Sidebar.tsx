@@ -15,6 +15,7 @@ import { useUserChatsStore } from "@/stores/userChatsStore";
 import { useActiveChatID } from "@/stores/activeChatID";
 import { useActiveChat } from "@/stores/activeChat";
 import Link from "next/link";
+import { useIsGeneratingStore } from "@/stores/useIsGeneratingStore";
 
 export function Sidebar() {
   const [token, session] = useAuth();
@@ -23,6 +24,7 @@ export function Sidebar() {
   const { activeChatId, setActiveChatId } = useActiveChatID();
   const { chatIDs, setChatIDs } = useUserChatsStore();
   const { chat, setActiveChat } = useActiveChat();
+  const { isGenerating } = useIsGeneratingStore();
 
   useEffect(() => {
     if (!session) return;
@@ -127,14 +129,19 @@ export function Sidebar() {
             <div className="px-4 py-2 text-gray-700 font-semibold">Chats</div>
             <div className="overflow-y-auto">
               {chatIDs.map((chat) => (
-                <div
+                <button
                   key={chat.id}
-                  className={`trigger hover:cursor-pointer flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-200 ${
+                  className={`trigger hover:cursor-pointer border-none bg-transparent flex w-full items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-200 ${
                     chat.id === useActiveChatID.getState().activeChatId
                       ? "bg-gray-200"
                       : ""
                   }`}
+                  disabled={isGenerating}
                   onClick={(e: any) => {
+                    if (isGenerating) {
+                      console.log("is generating");
+                      return;
+                    }
                     if (!e.target.classList.contains("trigger")) return;
                     useActiveChatID.setState({ activeChatId: chat.id });
                     router.replace("/");
@@ -150,12 +157,13 @@ export function Sidebar() {
                   >
                     <FaTrash />
                   </button>
-                </div>
+                </button>
               ))}
             </div>
             <a
               className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 mt-2 hover:cursor-pointer"
               onClick={() => {
+                if (isGenerating) return;
                 setActiveChat({
                   id: "",
                   title: "",

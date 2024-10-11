@@ -3,7 +3,7 @@ from models.user import User
 from utils import hash_password
 from auth import sign_jwt
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["Auths"])
 
 
 @router.post("/register")

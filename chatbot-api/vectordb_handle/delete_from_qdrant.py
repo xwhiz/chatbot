@@ -3,7 +3,6 @@ from qdrant_client.http import models as rest
 
 
 def delete_file_from_qdrant(client: QdrantClient, collection_name: str, filename: str):
-
     search_result = client.scroll(
         collection_name=collection_name,
         scroll_filter=rest.Filter(

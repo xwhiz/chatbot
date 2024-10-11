@@ -18,6 +18,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from bson import ObjectId
 from decouple import config
+from qdrant_client import QdrantClient
 
 from lifespan import lifespan
 from utils import hash_password
@@ -352,7 +353,16 @@ async def generate_response(chat_id: str):
     # # print(retriever.invoke(last_human_message["message"]))
     # print(ensemble_retriever.invoke(last_human_message["message"]))
 
-    for chunk in app.qa_chain.stream(last_human_message["message"]):
+    try:
+        stream = app.qa_chain.stream(last_human_message["message"])
+    except Exception as e:
+        print("Error in generating response:", e)
+
+        print("Recreating Qdrant client")
+        app.client = QdrantClient(path=config("VECTOR_DOC_DB_PATH"))
+        stream = app.qa_chain.stream(last_human_message["message"])
+
+    for chunk in stream:
         yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk}).strip()}\n\n"
 
     # stream = ollama.chat(
@@ -372,7 +382,6 @@ async def generate_response(chat_id: str):
 
 @app.get("/generate-response")
 async def bot_response(chat_id: str, token: str):
-
     payload = decode_jwt(token)
 
     if not payload:

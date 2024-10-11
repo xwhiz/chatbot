@@ -26,7 +26,7 @@ from models import User, Chat
 from auth import decode_jwt
 from vectordb_handle import upsert_pdf_to_qdrant, delete_file_from_qdrant
 
-from routers import auth
+from routers import auth, chats
 
 app = FastAPI(lifespan=lifespan)
 
@@ -86,6 +86,7 @@ def read_root():
 
 
 app.include_router(auth.router)
+app.include_router(chats.router)
 
 
 @app.post("/seed/create-admin")
@@ -306,121 +307,6 @@ async def update_chat(request: Request):
     )
 
 
-# @app.post("/generate-response")
-# async def bot_response(
-#     request: Request,
-#     response: Response,
-# ):
-#     body = await request.json()
-#     chat_id = body.get("chat_id")
-
-#     if chat_id is None:
-#         response.status_code = status.HTTP_400_BAD_REQUEST
-#         return {"success": False, "message": "Chat id is required"}
-
-#     chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
-
-#     if not chat:
-#         response.status_code = status.HTTP_404_NOT_FOUND
-#         return {"success": False, "message": "Chat not found"}
-
-#     message = {
-#         "sender": "ai",
-#         "message": "Response from the CHATBOT",
-#     }
-
-#     chat["messages"].append(message)
-
-#     result = await app.database["chats"].update_one(
-#         {"_id": ObjectId(chat_id)}, {"$set": chat}
-#     )
-
-#     if not result:
-#         response.status_code = status.HTTP_400_BAD_REQUEST
-#         return {"success": False, "message": "Could not update chat"}
-
-#     if not result.aupsert_to_chroma
-#     response.status_code = status.HTTP_200_OK
-#     return {
-#         "success": True,
-#         "message": "Chat updated successfully",
-#         "chat_id": chat_id,
-#         "messageObject": message,
-#     }
-
-
-@app.get("/chats/ids")
-async def get_chat_ids(request: Request, response: Response):
-    payload = request.state.payload
-    user_email = payload["email"]
-
-    chats = (
-        await app.database["chats"]
-        .find({"user_email": user_email})
-        .to_list(length=1000)
-    )
-
-    chat_details = [
-        {
-            "id": str(chat["_id"]),
-            "title": chat["title"],
-        }
-        for chat in chats
-    ]
-
-    return {
-        "success": True,
-        "message": "Chat ids retrieved successfully",
-        "data": chat_details,
-    }
-
-
-@app.get("/chats/{chat_id}")
-async def get_chat(request: Request, response: Response, chat_id: str):
-    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
-
-    if not chat:
-        response.status_code = status.HTTP_404_NOT_FOUND
-        return {"success": False, "message": "Chat not found"}
-
-    chat = {
-        "_id": str(chat["_id"]),
-        "title": chat["title"],
-        "messages": chat["messages"],
-        "user_email": chat["user_email"],
-    }
-
-    return {
-        "success": True,
-        "message": "Chat retrieved successfully",
-        "data": chat,
-    }
-
-
-@app.delete("/chats/{chat_id}")
-async def delete_chat(request: Request, response: Response, chat_id: str):
-    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
-
-    if not chat:
-        response.status_code = status.HTTP_404_NOT_FOUND
-        return {"success": False, "message": "Chat not found"}
-
-    result = await app.database["chats"].delete_one({"_id": ObjectId(chat_id)})
-
-    if not result:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"success": False, "message": "Could not delete chat"}
-
-    if not result.acknowledged:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"success": False, "message": "Could not delete chat"}
-
-    return {
-        "success": True,
-        "message": "Chat deleted successfully",
-    }
-
-
 @app.delete("/users/{user_id}")
 async def delete_user_and_all_their_chats(
     request: Request, response: Response, user_id: str
@@ -533,147 +419,6 @@ async def get_users(
         "message": "Users retrieved successfully",
         "data": users,
     }
-
-
-@app.post("/chats/count")
-async def get_chats_count(request: Request, response: Response):
-    # if it's admin, allow else return unauthorized
-    payload = request.state.payload
-    if payload["role"] != "admin":
-        response.status_code = status.HTTP_401_UNAUTHORIZED
-        return {"success": False, "message": "Unauthorized"}
-
-    body = await request.json()
-    user_id = body.get("user_id")
-
-    if not user_id:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"success": False, "message": "User id is required"}
-
-    user = await app.database["users"].find_one({"_id": ObjectId(user_id)})
-
-    if not user:
-        response.status_code = status.HTTP_404_NOT_FOUND
-        return {"success": False, "message": "User not found"}
-
-    user_email = user["email"]
-
-    count = await app.database["chats"].count_documents({"user_email": user_email})
-
-    return {
-        "success": True,
-        "message": "Chats count retrieved successfully",
-        "data": count,
-    }
-
-
-@app.post("/chats")
-async def get_chats(
-    request: Request, response: Response, page: int = 0, limit: int = 10
-):
-    # if it's admin, allow else return unauthorized
-    payload = request.state.payload
-    if payload["role"] != "admin":
-        response.status_code = status.HTTP_401_UNAUTHORIZED
-        return {"success": False, "message": "Unauthorized"}
-
-    body = await request.json()
-    user_id = body.get("user_id")
-
-    if not user_id:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"success": False, "message": "User id is required"}
-
-    user = await app.database["users"].find_one({"_id": ObjectId(user_id)})
-
-    if not user:
-        response.status_code = status.HTTP_404_NOT_FOUND
-        return {"success": False, "message": "User not found"}
-
-    user_email = user["email"]
-
-    chats = (
-        await app.database["chats"]
-        .find({"user_email": user_email})
-        .skip(page * limit)
-        .limit(limit)
-        .to_list(length=limit)
-    )
-
-    chats = [
-        {
-            "_id": str(chat["_id"]),
-            "title": chat["title"],
-            "user_email": chat["user_email"],
-            "created_at": chat["created_at"],
-        }
-        for chat in chats
-    ]
-
-    return {
-        "success": True,
-        "message": "Chats retrieved successfully",
-        "data": chats,
-    }
-
-
-@app.get("/chats/all/minimal")
-async def get_all_chats_minimal(request: Request, response: Response):
-    # if it's admin, allow else return unauthorized
-    payload = request.state.payload
-
-    if payload["role"] != "admin":
-        response.status_code = status.HTTP_401_UNAUTHORIZED
-        return {"success": False, "message": "Unauthorized"}
-
-    chats = await app.database["chats"].find().to_list(length=1000)
-
-    chats = [
-        {
-            "_id": str(chat["_id"]),
-            "created_at": chat["created_at"],
-        }
-        for chat in chats
-    ]
-
-    return {
-        "success": True,
-        "message": "Chats retrieved successfully",
-        "data": chats,
-    }
-
-
-@app.get("/chats/{chat_id}")
-async def get_single_chat(request: Request, response: Response, chat_id: str):
-    # if it's admin, allow else return unauthorized
-    payload = request.state.payload
-
-    if payload["role"] != "admin":
-        response.status_code = status.HTTP_401_UNAUTHORIZED
-        return {"success": False, "message": "Unauthorized"}
-
-    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
-
-    if not chat:
-        response.status_code = status.HTTP_404_NOT_FOUND
-        return {"success": False, "message": "Chat not found"}
-
-    chat = {
-        "_id": str(chat["_id"]),
-        "title": chat["title"],
-        "messages": chat["messages"],
-        "user_email": chat["user_email"],
-    }
-
-    return {
-        "success": True,
-        "message": "Chat retrieved successfully",
-        "data": chat,
-    }
-
-
-###########################################
-# Documents
 
 
 @app.get("/documents/count")

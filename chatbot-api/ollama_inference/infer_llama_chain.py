@@ -9,14 +9,15 @@ def initialize_qa_chain(llm: ChatOllama, retriever):
         return "\n\n".join(doc.page_content for doc in docs)
 
     RAG_TEMPLATE = """
-    You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know.
+    You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question as accurately as possible. If the context does not directly provide an answer, or if the question is unrelated to the context, use your general knowledge to respond appropriately and forget about the context.
 
     <context>
     {context}
     </context>
 
     Answer the following question:
-    {question}"""
+    {question}
+    """
 
     rag_prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
 

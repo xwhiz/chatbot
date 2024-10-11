@@ -51,12 +51,14 @@ test.db
 log.txt
 Pipfile.lock
 env3.*
-.env
+.env*
+.venv*
 docs_build
 site_build
-env
 docs.zip
 archive.zip
+
+env*
 
 # vim temporary files
 *~

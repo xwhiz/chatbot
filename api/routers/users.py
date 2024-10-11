@@ -1,0 +1,117 @@
+from fastapi import APIRouter, Response, status, Request
+from bson import ObjectId
+
+router = APIRouter(prefix="/users", tags=["Users"])
+
+
+@router.get("/")
+async def get_users(
+    request: Request, response: Response, page: int = 0, limit: int = 10
+):
+    # if it's admin, allow else return unauthorized
+    payload = request.state.payload
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    users = (
+        await router.database["users"]
+        .find()
+        .skip(page * limit)
+        .limit(limit)
+        .to_list(length=limit)
+    )
+
+    users = [
+        {
+            "_id": str(user["_id"]),
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+            "created_at": user["created_at"],
+        }
+        for user in users
+    ]
+
+    return {
+        "success": True,
+        "message": "Users retrieved successfully",
+        "data": users,
+    }
+
+
+@router.delete("/{user_id}")
+async def delete_user_and_all_their_chats(
+    request: Request, response: Response, user_id: str
+):
+    payload = request.state.payload
+
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    user = await router.database["users"].find_one({"_id": ObjectId(user_id)})
+
+    if not user:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "User not found"}
+
+    result = await router.database["users"].delete_one({"_id": ObjectId(user_id)})
+
+    # delete all the chats of the user
+    await router.database["chats"].delete_many({"user_email": user["email"]})
+
+    if not result:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Could not delete user"}
+
+    if not result.acknowledged:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Could not delete user"}
+
+    return {
+        "success": True,
+        "message": "User deleted successfully",
+    }
+
+
+@router.get("/all-minimal")
+async def get_all_users_minimal(request: Request, response: Response):
+    payload = request.state.payload
+
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    users = await router.database["users"].find().to_list(length=1000)
+
+    users = [
+        {
+            "_id": str(user["_id"]),
+            "created_at": user["created_at"],
+        }
+        for user in users
+    ]
+
+    return {
+        "success": True,
+        "message": "Users retrieved successfully",
+        "data": users,
+    }
+
+
+@router.get("/count")
+async def get_users_count(request: Request, response: Response):
+    # if it's admin, allow else return unauthorized
+    payload = request.state.payload
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    count = await router.database["users"].count_documents({})
+
+    return {
+        "success": True,
+        "message": "Users count retrieved successfully",
+        "data": count,
+    }

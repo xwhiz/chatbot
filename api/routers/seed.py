@@ -4,10 +4,10 @@ from typing import Annotated
 from auth import decode_jwt
 from utils import hash_password
 
-app = APIRouter(prefix="/seed", tags=["Seed"])
+router = APIRouter(prefix="/seed", tags=["Seed"])
 
 
-@app.post("/create-admin")
+@router.post("/create-admin")
 async def create_admin(authorization: Annotated[str, Header()], response: Response):
     token = authorization.split(" ")[1]
 
@@ -22,7 +22,7 @@ async def create_admin(authorization: Annotated[str, Header()], response: Respon
         return {"success": False, "message": "Unauthorized"}
 
     # remove current admin if there is any
-    await app.database["users"].delete_many({"role": "admin"})
+    await router.database["users"].delete_many({"role": "admin"})
 
     # create new admin
     password = "admin"
@@ -32,7 +32,7 @@ async def create_admin(authorization: Annotated[str, Header()], response: Respon
         name="Admin", email="admin@chatbot.com", password=hashed_password, role="admin"
     )
 
-    result = await app.database["users"].insert_one(admin.model_dump())
+    result = await router.database["users"].insert_one(admin.model_dump())
 
     if not result:
         return {"success": False, "message": "Could not create admin"}

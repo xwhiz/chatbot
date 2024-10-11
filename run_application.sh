@@ -19,20 +19,23 @@
 # echo "Application is ready!"
 
 # Function to run npm
-run_npm() {
-    echo "Starting npm..."
-    npm run start
+run_frontend() {
+    echo "Starting frontend..."
+    cd frontend
+    npm run dev
 }
 
 # Function to run FastAPI
 run_fastapi() {
     echo "Starting FastAPI..."
-    cd chatbot-api
-    fastapi dev main.py # Modify this line if your FastAPI command is different
+    deactivate
+    source .venv/bin/activate
+    cd api
+    fastapi dev main.py
 }
 
 # Run both functions in parallel
-run_npm &
+run_frontend &
 run_fastapi &
 
 # Wait for both processes to finish

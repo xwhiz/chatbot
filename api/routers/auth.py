@@ -26,6 +26,7 @@ async def register(user: User, request: Request, response: Response):
         }
 
     user.password = hash_password(user.password)
+    user.accessible_docs = ["all"]
     result = await router.database["users"].insert_one(user.model_dump())
 
     if not result:

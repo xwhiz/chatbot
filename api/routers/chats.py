@@ -15,6 +15,8 @@ async def get_chats(
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return {"success": False, "message": "Unauthorized"}
 
+    app = request.app
+
     body = await request.json()
     user_id = body.get("user_id")
 
@@ -22,7 +24,7 @@ async def get_chats(
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {"success": False, "message": "User id is required"}
 
-    user = await router.database["users"].find_one({"_id": ObjectId(user_id)})
+    user = await app.database["users"].find_one({"_id": ObjectId(user_id)})
 
     if not user:
         response.status_code = status.HTTP_404_NOT_FOUND
@@ -31,7 +33,7 @@ async def get_chats(
     user_email = user["email"]
 
     chats = (
-        await router.database["chats"]
+        await app.database["chats"]
         .find({"user_email": user_email})
         .skip(page * limit)
         .limit(limit)
@@ -57,11 +59,13 @@ async def get_chats(
 
 @router.get("/ids")
 async def get_chat_ids(request: Request, response: Response):
+    app = request.app
+
     payload = request.state.payload
     user_email = payload["email"]
 
     chats = (
-        await router.database["chats"]
+        await app.database["chats"]
         .find({"user_email": user_email})
         .to_list(length=1000)
     )
@@ -83,7 +87,8 @@ async def get_chat_ids(request: Request, response: Response):
 
 @router.get("/{chat_id}")
 async def get_chat(request: Request, response: Response, chat_id: str):
-    chat = await router.database["chats"].find_one({"_id": ObjectId(chat_id)})
+    app = request.app
+    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
 
     if not chat:
         response.status_code = status.HTTP_404_NOT_FOUND
@@ -105,13 +110,14 @@ async def get_chat(request: Request, response: Response, chat_id: str):
 
 @router.delete("/{chat_id}")
 async def delete_chat(request: Request, response: Response, chat_id: str):
-    chat = await router.database["chats"].find_one({"_id": ObjectId(chat_id)})
+    app = request.app
+    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
 
     if not chat:
         response.status_code = status.HTTP_404_NOT_FOUND
         return {"success": False, "message": "Chat not found"}
 
-    result = await router.database["chats"].delete_one({"_id": ObjectId(chat_id)})
+    result = await app.database["chats"].delete_one({"_id": ObjectId(chat_id)})
 
     if not result:
         response.status_code = status.HTTP_400_BAD_REQUEST
@@ -129,6 +135,8 @@ async def delete_chat(request: Request, response: Response, chat_id: str):
 
 @router.post("/count")
 async def get_chats_count(request: Request, response: Response):
+    app = request.app
+
     # if it's admin, allow else return unauthorized
     payload = request.state.payload
     if payload["role"] != "admin":
@@ -142,7 +150,7 @@ async def get_chats_count(request: Request, response: Response):
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {"success": False, "message": "User id is required"}
 
-    user = await router.database["users"].find_one({"_id": ObjectId(user_id)})
+    user = await app.database["users"].find_one({"_id": ObjectId(user_id)})
 
     if not user:
         response.status_code = status.HTTP_404_NOT_FOUND
@@ -150,7 +158,7 @@ async def get_chats_count(request: Request, response: Response):
 
     user_email = user["email"]
 
-    count = await router.database["chats"].count_documents({"user_email": user_email})
+    count = await app.database["chats"].count_documents({"user_email": user_email})
 
     return {
         "success": True,
@@ -161,6 +169,8 @@ async def get_chats_count(request: Request, response: Response):
 
 @router.get("/all/minimal")
 async def get_all_chats_minimal(request: Request, response: Response):
+    app = request.app
+
     # if it's admin, allow else return unauthorized
     payload = request.state.payload
 
@@ -168,7 +178,7 @@ async def get_all_chats_minimal(request: Request, response: Response):
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return {"success": False, "message": "Unauthorized"}
 
-    chats = await router.database["chats"].find().to_list(length=1000)
+    chats = await app.database["chats"].find().to_list(length=1000)
 
     chats = [
         {
@@ -187,6 +197,8 @@ async def get_all_chats_minimal(request: Request, response: Response):
 
 @router.get("/{chat_id}")
 async def get_single_chat(request: Request, response: Response, chat_id: str):
+    app = request.app
+
     # if it's admin, allow else return unauthorized
     payload = request.state.payload
 
@@ -194,7 +206,7 @@ async def get_single_chat(request: Request, response: Response, chat_id: str):
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return {"success": False, "message": "Unauthorized"}
 
-    chat = await router.database["chats"].find_one({"_id": ObjectId(chat_id)})
+    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
 
     if not chat:
         response.status_code = status.HTTP_404_NOT_FOUND

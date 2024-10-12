@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, Response, status
+from fastapi import APIRouter, Header, Response, status, Request
 from models import User
 from typing import Annotated
 from auth import decode_jwt
@@ -8,7 +8,10 @@ router = APIRouter(prefix="/seed", tags=["Seed"])
 
 
 @router.post("/create-admin")
-async def create_admin(authorization: Annotated[str, Header()], response: Response):
+async def create_admin(
+    authorization: Annotated[str, Header()], request: Request, response: Response
+):
+    app = request.app
     token = authorization.split(" ")[1]
 
     tokenPayload = decode_jwt(token)
@@ -22,7 +25,7 @@ async def create_admin(authorization: Annotated[str, Header()], response: Respon
         return {"success": False, "message": "Unauthorized"}
 
     # remove current admin if there is any
-    await router.database["users"].delete_many({"role": "admin"})
+    await app.database["users"].delete_many({"role": "admin"})
 
     # create new admin
     password = "admin"
@@ -32,7 +35,7 @@ async def create_admin(authorization: Annotated[str, Header()], response: Respon
         name="Admin", email="admin@chatbot.com", password=hashed_password, role="admin"
     )
 
-    result = await router.database["users"].insert_one(admin.model_dump())
+    result = await app.database["users"].insert_one(admin.model_dump())
 
     if not result:
         return {"success": False, "message": "Could not create admin"}

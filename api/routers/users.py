@@ -8,6 +8,8 @@ router = APIRouter(prefix="/users", tags=["Users"])
 async def get_users(
     request: Request, response: Response, page: int = 0, limit: int = 10
 ):
+    app = request.app
+
     # if it's admin, allow else return unauthorized
     payload = request.state.payload
     if payload["role"] != "admin":
@@ -15,7 +17,7 @@ async def get_users(
         return {"success": False, "message": "Unauthorized"}
 
     users = (
-        await router.database["users"]
+        await app.database["users"]
         .find()
         .skip(page * limit)
         .limit(limit)
@@ -44,22 +46,23 @@ async def get_users(
 async def delete_user_and_all_their_chats(
     request: Request, response: Response, user_id: str
 ):
+    app = request.app
     payload = request.state.payload
 
     if payload["role"] != "admin":
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return {"success": False, "message": "Unauthorized"}
 
-    user = await router.database["users"].find_one({"_id": ObjectId(user_id)})
+    user = await app.database["users"].find_one({"_id": ObjectId(user_id)})
 
     if not user:
         response.status_code = status.HTTP_404_NOT_FOUND
         return {"success": False, "message": "User not found"}
 
-    result = await router.database["users"].delete_one({"_id": ObjectId(user_id)})
+    result = await app.database["users"].delete_one({"_id": ObjectId(user_id)})
 
     # delete all the chats of the user
-    await router.database["chats"].delete_many({"user_email": user["email"]})
+    await app.database["chats"].delete_many({"user_email": user["email"]})
 
     if not result:
         response.status_code = status.HTTP_400_BAD_REQUEST
@@ -77,13 +80,14 @@ async def delete_user_and_all_their_chats(
 
 @router.get("/all-minimal")
 async def get_all_users_minimal(request: Request, response: Response):
+    app = request.app
     payload = request.state.payload
 
     if payload["role"] != "admin":
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return {"success": False, "message": "Unauthorized"}
 
-    users = await router.database["users"].find().to_list(length=1000)
+    users = await app.database["users"].find().to_list(length=1000)
 
     users = [
         {
@@ -102,13 +106,14 @@ async def get_all_users_minimal(request: Request, response: Response):
 
 @router.get("/count")
 async def get_users_count(request: Request, response: Response):
+    app = request.app
     # if it's admin, allow else return unauthorized
     payload = request.state.payload
     if payload["role"] != "admin":
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return {"success": False, "message": "Unauthorized"}
 
-    count = await router.database["users"].count_documents({})
+    count = await app.database["users"].count_documents({})
 
     return {
         "success": True,

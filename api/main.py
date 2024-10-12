@@ -1,28 +1,19 @@
-from datetime import datetime
 import json
-import time
 from fastapi import (
     Body,
     FastAPI,
-    File,
-    Form,
-    HTTPException,
-    Header,
     Response,
-    UploadFile,
     status,
     Request,
 )
-from typing import Annotated
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from bson import ObjectId
 from decouple import config
 from qdrant_client import QdrantClient
 
 from lifespan import lifespan
-from utils import hash_password
-from models import User, Chat
+from models import Chat
 from auth import decode_jwt
 
 from routers import auth, chats, documents, users, seed

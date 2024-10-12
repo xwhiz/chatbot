@@ -3,11 +3,13 @@ from models.user import User
 from utils import hash_password
 from auth import sign_jwt
 
-router = APIRouter(prefix="/auth", tags=["Auths"])
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/register")
-async def register(user: User, response: Response):
+async def register(user: User, request: Request, response: Response):
+    app = request.app
+
     if user.role == "admin":
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {
@@ -15,8 +17,8 @@ async def register(user: User, response: Response):
             "message": "Cannot create admin user",
         }
 
-    u = await router.database["users"].find_one({"email": user.email})
-    if u:
+    fetched_user = await app.database["users"].find_one({"email": user.email})
+    if fetched_user:
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {
             "success": False,
@@ -48,9 +50,13 @@ async def register(user: User, response: Response):
 
 @router.post("/login")
 async def login_user(
-    response: Response, email: str = Body(...), password: str = Body(...)
+    request: Request,
+    response: Response,
+    email: str = Body(...),
+    password: str = Body(...),
 ):
-    user = await router.database["users"].find_one({"email": email})
+    app = request.app
+    user = await app.database["users"].find_one({"email": email})
 
     if not user:
         response.status_code = status.HTTP_401_UNAUTHORIZED
@@ -75,6 +81,8 @@ async def login_user(
 
 @router.post("change-name")
 async def change_name(request: Request, response: Response):
+    app = request.app
+
     payload = request.state.payload
     body = await request.json()
 
@@ -86,7 +94,7 @@ async def change_name(request: Request, response: Response):
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {"success": False, "message": "Password is required"}
 
-    user = await router.database["users"].find_one({"email": payload["email"]})
+    user = await app.database["users"].find_one({"email": payload["email"]})
 
     if not user:
         response.status_code = status.HTTP_400_BAD_REQUEST
@@ -98,7 +106,7 @@ async def change_name(request: Request, response: Response):
 
     new_name = body["name"]
 
-    result = await router.database["users"].update_one(
+    result = await app.database["users"].update_one(
         {"email": payload["email"]}, {"$set": {"name": new_name}}
     )
 
@@ -115,6 +123,7 @@ async def change_name(request: Request, response: Response):
 
 @router.post("/change-password")
 async def change_password(request: Request, response: Response):
+    app = request.app
     payload = request.state.payload
     body = await request.json()
 
@@ -126,7 +135,7 @@ async def change_password(request: Request, response: Response):
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {"success": False, "message": "New password is required"}
 
-    user = await router.database["users"].find_one({"email": payload["email"]})
+    user = await app.database["users"].find_one({"email": payload["email"]})
 
     if not user:
         response.status_code = status.HTTP_400_BAD_REQUEST
@@ -138,7 +147,7 @@ async def change_password(request: Request, response: Response):
 
     new_password = hash_password(body["newPassword"])
 
-    result = await router.database["users"].update_one(
+    result = await app.database["users"].update_one(
         {"email": payload["email"]}, {"$set": {"password": new_password}}
     )
 

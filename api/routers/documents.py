@@ -22,13 +22,15 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 
 @router.get("/count")
 async def get_documents_count(request: Request, response: Response):
+    app = request.app
+
     # if it's admin, allow else return unauthorized
     payload = request.state.payload
     if payload["role"] != "admin":
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return {"success": False, "message": "Unauthorized"}
 
-    count = await router.database["documents"].count_documents({})
+    count = await app.database["documents"].count_documents({})
 
     return {
         "success": True,
@@ -41,6 +43,8 @@ async def get_documents_count(request: Request, response: Response):
 async def get_documents(
     request: Request, response: Response, page: int = 0, limit: int = 10
 ):
+    app = request.app
+
     # if it's admin, allow else return unauthorized
     payload = request.state.payload
     if payload["role"] != "admin":
@@ -48,7 +52,7 @@ async def get_documents(
         return {"success": False, "message": "Unauthorized"}
 
     documents = (
-        await router.database["documents"]
+        await app.database["documents"]
         .find()
         .skip(page * limit)
         .limit(limit)
@@ -78,6 +82,8 @@ async def create_document(
     title: str = Form(...),
     file: UploadFile = File(...),
 ):
+    app = request.app
+
     # Check authorization
     payload = request.state.payload
     if payload["role"] != "admin":
@@ -116,10 +122,10 @@ async def create_document(
     }
 
     print("Uploading to Qdrant")
-    upsert_pdf_to_qdrant(router.vector_store, file_location)
+    upsert_pdf_to_qdrant(app.vector_store, file_location)
     print("Uploaded to Qdrant")
 
-    result = await router.database["documents"].insert_one(document)
+    result = await app.database["documents"].insert_one(document)
 
     if not result:
         raise HTTPException(
@@ -148,6 +154,8 @@ async def create_document(
 
 @router.get("/{document_id}")
 async def get_document(document_id: str, request: Request, response: Response):
+    app = request.app
+
     # Check authorization
     payload = request.state.payload
     if payload["role"] != "admin":
@@ -156,9 +164,7 @@ async def get_document(document_id: str, request: Request, response: Response):
         )
 
     # Fetch the document from MongoDB
-    document = await router.database["documents"].find_one(
-        {"_id": ObjectId(document_id)}
-    )
+    document = await app.database["documents"].find_one({"_id": ObjectId(document_id)})
 
     if not document:
         raise HTTPException(
@@ -183,6 +189,8 @@ async def get_document(document_id: str, request: Request, response: Response):
 
 @router.delete("/{document_id}")
 async def delete_document(document_id: str, request: Request, response: Response):
+    app = request.app
+
     # Check authorization
     payload = request.state.payload
     if payload["role"] != "admin":
@@ -191,9 +199,7 @@ async def delete_document(document_id: str, request: Request, response: Response
         )
 
     # Fetch the document from MongoDB
-    document = await router.database["documents"].find_one(
-        {"_id": ObjectId(document_id)}
-    )
+    document = await app.database["documents"].find_one({"_id": ObjectId(document_id)})
 
     if not document:
         raise HTTPException(
@@ -208,7 +214,7 @@ async def delete_document(document_id: str, request: Request, response: Response
             status_code=status.HTTP_400_BAD_REQUEST, detail="File path not found"
         )
 
-    delete_file_from_qdrant(router.client, config("COLLECTION_NAME"), file_path)
+    delete_file_from_qdrant(app.client, config("COLLECTION_NAME"), file_path)
 
     # Delete the file from disk
     import os
@@ -216,9 +222,7 @@ async def delete_document(document_id: str, request: Request, response: Response
     os.remove(file_path)
 
     # Delete the document from MongoDB
-    result = await router.database["documents"].delete_one(
-        {"_id": ObjectId(document_id)}
-    )
+    result = await app.database["documents"].delete_one({"_id": ObjectId(document_id)})
 
     if not result:
         raise HTTPException(

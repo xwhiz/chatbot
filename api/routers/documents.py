@@ -139,10 +139,12 @@ async def create_document(
     upsert_pdf_to_qdrant(app.vector_store, file_location, document_id)
     print("Uploaded to Qdrant")
 
+    # delete the file from disk
+    os.remove(file_location)
+
     document = {
         "_id": document_id,
         "title": title,
-        "file_path": file_location,
         "created_at": document["created_at"],
     }
 
@@ -189,6 +191,36 @@ async def get_document(document_id: str, request: Request, response: Response):
     )
 
 
+async def update_accessible_docs_for_all_users(app, document_id: str):
+    # Find all users who have the document_id in accessible_docs or have an empty accessible_docs
+    users = (
+        await app.database["users"]
+        .find({"accessible_docs": document_id})
+        .to_list(length=None)
+    )
+
+    for user in users:
+        accessible_docs = user.get("accessible_docs", [])
+
+        # Condition 1: If "all" is in accessible_docs, skip this user
+        if "all" in accessible_docs:
+            continue
+
+        # Condition 2: If document_id is in accessible_docs, remove it
+        if document_id in accessible_docs:
+            accessible_docs.remove(document_id)
+
+        # Condition 3: If accessible_docs becomes empty, set it to ["all"]
+        if not accessible_docs:
+            accessible_docs = ["all"]
+
+        # Update the user's accessible_docs in the database
+        await app.database["users"].update_one(
+            {"_id": ObjectId(user["_id"])},
+            {"$set": {"accessible_docs": accessible_docs}},
+        )
+
+
 @router.delete("/{document_id}")
 async def delete_document(document_id: str, request: Request, response: Response):
     app = request.app
@@ -208,23 +240,12 @@ async def delete_document(document_id: str, request: Request, response: Response
             status_code=status.HTTP_404_NOT_FOUND, detail="Document not found"
         )
 
-    # Get the file path from the document
-    file_path = document.get("file_path")
-
-    if not file_path:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="File path not found"
-        )
-
-    delete_document_from_qdrant(app.client, config("COLLECTION_NAME"), file_path)
-
-    # Delete the file from disk
-    import os
-
-    os.remove(file_path)
+    delete_document_from_qdrant(app.client, config("COLLECTION_NAME"), document_id)
 
     # Delete the document from MongoDB
     result = await app.database["documents"].delete_one({"_id": ObjectId(document_id)})
+
+    await update_accessible_docs_for_all_users(app, document_id)
 
     if not result:
         raise HTTPException(

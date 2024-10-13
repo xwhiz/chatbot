@@ -238,3 +238,41 @@ async def delete_document(document_id: str, request: Request, response: Response
         "success": True,
         "message": "Document deleted successfully",
     }
+
+
+@router.get("/count/{userid}")
+async def get_user_documents_count(request: Request, response: Response, userid: str):
+    app = request.app
+
+    # if it's admin, allow else return unauthorized
+    payload = request.state.payload
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    # get current user
+    user = await app.database["users"].find_one({"_id": ObjectId(userid)})
+    if not user:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "User not found"}
+
+    documents = await app.database["documents"].find({}).to_list(length=1000)
+
+    if user["accessible_docs"] == ["all"]:
+        return {
+            "success": True,
+            "message": "Documents count retrieved successfully",
+            "data": len(documents),
+        }
+
+    accessible_docs = user["accessible_docs"]
+    accessible_docs_count = 0
+    for document in documents:
+        if str(document["_id"]) in accessible_docs:
+            accessible_docs_count += 1
+
+    return {
+        "success": True,
+        "message": "Documents count retrieved successfully",
+        "data": accessible_docs_count,
+    }

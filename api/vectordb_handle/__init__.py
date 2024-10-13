@@ -1,2 +1,2 @@
 from .upsert_to_qdrant import upsert_pdf_to_qdrant
-from .delete_from_qdrant import delete_file_from_qdrant
+from .delete_from_qdrant import delete_document_from_qdrant

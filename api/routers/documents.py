@@ -14,7 +14,7 @@ from datetime import datetime
 from decouple import config
 import time
 
-from vectordb_handle import upsert_pdf_to_qdrant, delete_file_from_qdrant
+from vectordb_handle import upsert_pdf_to_qdrant, delete_document_from_qdrant
 
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -121,10 +121,6 @@ async def create_document(
         "created_at": datetime.now(),
     }
 
-    print("Uploading to Qdrant")
-    upsert_pdf_to_qdrant(app.vector_store, file_location)
-    print("Uploaded to Qdrant")
-
     result = await app.database["documents"].insert_one(document)
 
     if not result:
@@ -137,8 +133,14 @@ async def create_document(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Could not create document"
         )
 
+    document_id = str(result.inserted_id)
+
+    print("Uploading to Qdrant")
+    upsert_pdf_to_qdrant(app.vector_store, file_location, document_id)
+    print("Uploaded to Qdrant")
+
     document = {
-        "_id": str(result.inserted_id),
+        "_id": document_id,
         "title": title,
         "file_path": file_location,
         "created_at": document["created_at"],
@@ -214,7 +216,7 @@ async def delete_document(document_id: str, request: Request, response: Response
             status_code=status.HTTP_400_BAD_REQUEST, detail="File path not found"
         )
 
-    delete_file_from_qdrant(app.client, config("COLLECTION_NAME"), file_path)
+    delete_document_from_qdrant(app.client, config("COLLECTION_NAME"), file_path)
 
     # Delete the file from disk
     import os

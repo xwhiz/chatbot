@@ -276,3 +276,58 @@ async def get_user_documents_count(request: Request, response: Response, userid:
         "message": "Documents count retrieved successfully",
         "data": accessible_docs_count,
     }
+
+
+@router.get("/allowed-docs/{userid}")
+async def get_user_documents(
+    request: Request, response: Response, userid: str, page: int = 0, limit: int = 10
+):
+    app = request.app
+
+    # if it's admin, allow else return unauthorized
+    payload = request.state.payload
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    # get current user
+    user = await app.database["users"].find_one({"_id": ObjectId(userid)})
+    if not user:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "User not found"}
+
+    documents = await app.database["documents"].find({}).to_list(length=1000)
+
+    if user["accessible_docs"] == ["all"]:
+        documents = [
+            {
+                "_id": str(document["_id"]),
+                "title": document["title"],
+                "created_at": document["created_at"],
+            }
+            for document in documents
+        ]
+
+        return {
+            "success": True,
+            "message": "Documents retrieved successfully",
+            "data": documents,
+        }
+
+    accessible_docs = user["accessible_docs"]
+    accessible_documents = []
+    for document in documents:
+        if str(document["_id"]) in accessible_docs:
+            accessible_documents.append(
+                {
+                    "_id": str(document["_id"]),
+                    "title": document["title"],
+                    "created_at": document["created_at"],
+                }
+            )
+
+    return {
+        "success": True,
+        "message": "Documents retrieved successfully",
+        "data": accessible_documents,
+    }

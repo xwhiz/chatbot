@@ -57,18 +57,15 @@ async def lifespan(app: FastAPI):
     print("Vector store created")
 
     print("Creating retriever")
-    retriever = vector_store.as_retriever(
-        search_type="similarity", search_kwargs={"k": 10, "score_threshold": 0.2}
-    )
+    # retriever = vector_store.as_retriever(
+    #     search_type="similarity", search_kwargs={"k": 10, "score_threshold": 0.2}
+    # )
     print("Retriever created")
 
     print("Creating Llama")
     llm = ChatOllama(model="llama3.1")
+    app.llm = llm
     print("LLm created")
-
-    print("Creating QA chain")
-    app.qa_chain = initialize_qa_chain(llm, retriever)
-    print("QA chain created")
 
     yield
 

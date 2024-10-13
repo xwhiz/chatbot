@@ -197,6 +197,15 @@ export default function Users() {
                 {row.role !== "admin" && (
                   <>
                     <Link
+                      href={{
+                        pathname: `/users/change-access/${row._id}`,
+                        query: { name: row.name },
+                      }}
+                      className="text-orange-500 mr-2 hover:underline border-none bg-transparent"
+                    >
+                      Change Access
+                    </Link>
+                    <Link
                       href={`/chats/${row._id}`}
                       className="text-blue-500 hover:underline"
                     >

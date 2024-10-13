@@ -141,6 +141,41 @@ export default function Users() {
   if (!session) return null;
   if (session.role !== "admin") router.push("/");
 
+  const handleRemove = async (id: string) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes",
+      cancelButtonText: "No, cancel!",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await axios.delete(
+        process.env.NEXT_PUBLIC_API_URL + `/users/${params.userid}/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setRecordsCount(recordsCount - 1);
+
+      setShouldUpdateDocs(!shouldUpdateDocs);
+
+      toast.success("Access removed successfully");
+    } catch (error: any) {
+      const data = error.response;
+      if (data) {
+        console.log(data.message);
+        toast.error(data.message);
+      }
+    }
+  };
+
   return (
     <WithSidebar>
       <div className="container mx-auto p-4 h-full overflow-auto scrollbar">

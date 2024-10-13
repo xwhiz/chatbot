@@ -12,10 +12,10 @@ from bson import ObjectId
 from decouple import config
 from qdrant_client import QdrantClient
 
+from ollama_inference import initialize_qa_chain
 from lifespan import lifespan
 from models import Chat
 from auth import decode_jwt
-
 from routers import auth, chats, documents, users, seed
 
 app = FastAPI(lifespan=lifespan)
@@ -150,10 +150,44 @@ async def add_message(
     return {"success": True, "message": "Chat updated successfully", "chat_id": chat_id}
 
 
+async def get_retriever_for_user(user_email: str):
+    user = await app.database["users"].find_one(
+        {"email": user_email}, {"accessible_docs": 1}
+    )
+
+    accessible_docs = user.get("accessible_docs", [])
+
+    if "all" in accessible_docs:
+        return app.vector_store.as_retriever(
+            search_type="similarity",
+            search_kwargs={
+                "k": 10,
+                "score_threshold": 0.2,
+            },
+        )
+
+    return app.vector_store.as_retriever(
+        search_type="similarity",
+        search_kwargs={
+            "k": 10,
+            "score_threshold": 0.2,
+            "filter": {
+                "must": [
+                    {"key": "document_id", "match": {"value": doc_id}}
+                    for doc_id in accessible_docs
+                ]
+            },
+        },
+    )
+
+
 async def generate_response(chat_id: str):
     chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
     if not chat:
         return
+
+    retriever = await get_retriever_for_user(chat["user_email"])
+    qa_chain = initialize_qa_chain(app.qa_chain.llm, retriever)
 
     last_human_message = None
     for message in reversed(chat["messages"]):
@@ -166,11 +200,8 @@ async def generate_response(chat_id: str):
 
     print("Generating response for:", last_human_message["message"])
 
-    # # print(retriever.invoke(last_human_message["message"]))
-    # print(ensemble_retriever.invoke(last_human_message["message"]))
-
     try:
-        stream = app.qa_chain.stream(last_human_message["message"])
+        stream = qa_chain.stream(last_human_message["message"])
     except Exception as e:
         print("Error in generating response:", e)
 

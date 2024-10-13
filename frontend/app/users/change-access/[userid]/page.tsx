@@ -176,6 +176,63 @@ export default function Users() {
     }
   };
 
+  const handleAddDocument = async () => {
+    const { value: documentId } = await Swal.fire({
+      title: "Create Document",
+      html: `<select id="swal-input1" class="swal2-input w-full max-w-xs px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter document title">
+        <option disabled selected value="">Select a document</option>
+        ${
+          nonAccessibleDocs.length === 0
+            ? "<option disabled value=''>No documents available</option>"
+            : nonAccessibleDocs.map(
+                (doc) => `<option value="${doc._id}">${doc.title}</option>`
+              )
+        }
+      </select>`,
+      focusConfirm: false,
+      showCancelButton: true,
+      preConfirm: () => {
+        const documentID = (
+          document.getElementById("swal-input1") as HTMLInputElement
+        ).value;
+
+        if (!documentID) {
+          Swal.showValidationMessage("Please select a valid option");
+          return false;
+        }
+        return documentID;
+      },
+    });
+
+    if (!documentId) return;
+
+    setIsAdding(true);
+
+    try {
+      await axios.put(
+        `${process.env.NEXT_PUBLIC_API_URL}/users/${params.userid}/${documentId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setShouldUpdateDocs(!shouldUpdateDocs);
+
+      toast.success("Document added successfully");
+    } catch (error: any) {
+      const data = error.response;
+      if (data) {
+        console.log(data.message);
+        toast.error(data.message);
+      }
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
   return (
     <WithSidebar>
       <div className="container mx-auto p-4 h-full overflow-auto scrollbar">

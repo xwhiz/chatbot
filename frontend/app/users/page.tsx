@@ -195,7 +195,7 @@ export default function Users() {
               </TableCell>
               <TableCell align="right">
                 {row.role !== "admin" && (
-                  <>
+                  <div className="flex justify-end items-center flex-wrap">
                     <Link
                       href={{
                         pathname: `/users/change-access/${row._id}`,
@@ -217,7 +217,7 @@ export default function Users() {
                     >
                       Delete
                     </button>
-                  </>
+                  </div>
                 )}
               </TableCell>
             </>

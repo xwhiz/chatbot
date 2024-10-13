@@ -184,9 +184,11 @@ export default function Users() {
         ${
           nonAccessibleDocs.length === 0
             ? "<option disabled value=''>No documents available</option>"
-            : nonAccessibleDocs.map(
-                (doc) => `<option value="${doc._id}">${doc.title}</option>`
-              )
+            : nonAccessibleDocs
+                .map(
+                  (doc) => `<option value="${doc._id}">${doc.title}</option>`
+                )
+                .join("")
         }
       </select>`,
       focusConfirm: false,

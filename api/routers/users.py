@@ -170,3 +170,49 @@ async def remove_doc_access_for_user(
         "success": True,
         "message": "Document access removed successfully",
     }
+
+
+@router.put("/{user_id}/{doc_id}")
+async def add_doc_access_for_user(
+    request: Request, response: Response, user_id: str, doc_id: str
+):
+    app = request.app
+    payload = request.state.payload
+
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    user = await app.database["users"].find_one({"_id": ObjectId(user_id)})
+
+    if not user:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "User not found"}
+
+    # if ["all"] is in accessible_docs, remove it
+    if "all" in user["accessible_docs"]:
+        user["accessible_docs"].remove("all")
+
+        all_documents = await app.database["documents"].find().to_list(length=1000)
+        all_documents = [str(doc["_id"]) for doc in all_documents]
+
+        user["accessible_docs"] = list(set(user["accessible_docs"] + all_documents))
+
+    if doc_id in user["accessible_docs"]:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Document already accessible by user"}
+
+    user["accessible_docs"].append(doc_id)
+
+    result = await app.database["users"].update_one(
+        {"_id": ObjectId(user_id)}, {"$set": user}
+    )
+
+    if not result.acknowledged:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Could not add document access"}
+
+    return {
+        "success": True,
+        "message": "Document access added successfully",
+    }

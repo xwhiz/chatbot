@@ -11,12 +11,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from bson import ObjectId
 from decouple import config
 from qdrant_client import QdrantClient
+from qdrant_client.http import models as rest
+from langchain_core.vectorstores import VectorStoreRetriever
 
 from ollama_inference import initialize_qa_chain
 from lifespan import lifespan
 from models import Chat
 from auth import decode_jwt
 from routers import auth, chats, documents, users, seed
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -150,7 +153,7 @@ async def add_message(
     return {"success": True, "message": "Chat updated successfully", "chat_id": chat_id}
 
 
-async def get_retriever_for_user(user_email: str):
+async def get_retriever_for_user(user_email: str) -> VectorStoreRetriever:
     user = await app.database["users"].find_one(
         {"email": user_email}, {"accessible_docs": 1}
     )
@@ -166,17 +169,23 @@ async def get_retriever_for_user(user_email: str):
             },
         )
 
+    print("Accessible docs", accessible_docs)
+
     return app.vector_store.as_retriever(
         search_type="similarity",
         search_kwargs={
             "k": 10,
             "score_threshold": 0.2,
-            "filter": {
-                "must": [
-                    {"key": "document_id", "match": {"value": doc_id}}
-                    for doc_id in accessible_docs
+            "filter": rest.Filter(
+                must=[
+                    rest.FieldCondition(
+                        key="metadata.document_id",  # Ensure the path to metadata is correct
+                        match=rest.MatchAny(
+                            any=accessible_docs,
+                        ),
+                    )
                 ]
-            },
+            ),
         },
     )
 
@@ -187,7 +196,7 @@ async def generate_response(chat_id: str):
         return
 
     retriever = await get_retriever_for_user(chat["user_email"])
-    qa_chain = initialize_qa_chain(app.qa_chain.llm, retriever)
+    qa_chain = initialize_qa_chain(app.llm, retriever)
 
     last_human_message = None
     for message in reversed(chat["messages"]):
@@ -199,6 +208,7 @@ async def generate_response(chat_id: str):
         return
 
     print("Generating response for:", last_human_message["message"])
+    print(retriever.invoke(last_human_message["message"]))
 
     try:
         stream = qa_chain.stream(last_human_message["message"])
@@ -207,7 +217,7 @@ async def generate_response(chat_id: str):
 
         print("Recreating Qdrant client")
         app.client = QdrantClient(path=config("VECTOR_DOC_DB_PATH"))
-        stream = app.qa_chain.stream(last_human_message["message"])
+        stream = qa_chain.stream(last_human_message["message"])
 
     for chunk in stream:
         yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk}).strip()}\n\n"

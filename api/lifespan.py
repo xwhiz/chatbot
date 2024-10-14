@@ -7,7 +7,6 @@ from qdrant_client import QdrantClient
 from contextlib import asynccontextmanager
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import ChatOllama
-from ollama_inference import initialize_qa_chain
 
 
 @asynccontextmanager
@@ -56,11 +55,11 @@ async def lifespan(app: FastAPI):
     app.vector_store = vector_store
     print("Vector store created")
 
-    print("Creating retriever")
+    # print("Creating retriever")
     # retriever = vector_store.as_retriever(
     #     search_type="similarity", search_kwargs={"k": 10, "score_threshold": 0.2}
     # )
-    print("Retriever created")
+    # print("Retriever created")
 
     print("Creating Llama")
     llm = ChatOllama(model="llama3.1")

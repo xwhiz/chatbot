@@ -101,8 +101,6 @@ async def create_document(
 
     import os
 
-    print("received file:", file.filename)
-
     # Create the directory if it doesn't exist
     if not os.path.exists("uploaded_documents"):
         os.makedirs("uploaded_documents")
@@ -138,9 +136,6 @@ async def create_document(
     print("Uploading to Qdrant")
     upsert_pdf_to_qdrant(app.vector_store, file_location, document_id)
     print("Uploaded to Qdrant")
-
-    # delete the file from disk
-    os.remove(file_location)
 
     document = {
         "_id": document_id,
@@ -241,6 +236,14 @@ async def delete_document(document_id: str, request: Request, response: Response
         )
 
     delete_document_from_qdrant(app.client, config("COLLECTION_NAME"), document_id)
+
+    # Delete the file from disk
+    file_path = document.get("file_path")
+    if file_path:
+        import os
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
     # Delete the document from MongoDB
     result = await app.database["documents"].delete_one({"_id": ObjectId(document_id)})

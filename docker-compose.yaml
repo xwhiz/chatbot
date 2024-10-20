@@ -10,7 +10,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - .:/app
+      - ./frontend:/app
     restart: unless-stopped
     depends_on:
       - api

@@ -5,8 +5,9 @@ from qdrant_client.http.models import Distance, VectorParams
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from contextlib import asynccontextmanager
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_ollama import ChatOllama
+
+from langchain_openai import OpenAI
+from langchain_openai import OpenAIEmbeddings
 
 
 @asynccontextmanager
@@ -36,14 +37,14 @@ async def lifespan(app: FastAPI):
         print(f"Creating collection: {collection_name}")
         client.create_collection(
             collection_name=collection_name,
-            vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+            vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
         )
 
     app.client = client
     print("Qdrant client created")
 
     print("Creating embeddings")
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embeddings = OpenAIEmbeddings()
     print("Embeddings created")
 
     print("Creating vector store")
@@ -55,14 +56,8 @@ async def lifespan(app: FastAPI):
     app.vector_store = vector_store
     print("Vector store created")
 
-    # print("Creating retriever")
-    # retriever = vector_store.as_retriever(
-    #     search_type="similarity", search_kwargs={"k": 10, "score_threshold": 0.2}
-    # )
-    # print("Retriever created")
-
     print("Creating Llama")
-    llm = ChatOllama(model="llama3.1")
+    llm = OpenAI()
     app.llm = llm
     print("LLm created")
 

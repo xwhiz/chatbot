@@ -1,3 +1,4 @@
+import os
 import json
 from fastapi import (
     Body,
@@ -20,6 +21,10 @@ from models import Chat
 from auth import decode_jwt
 from routers import auth, chats, documents, users, seed
 
+
+# handling the openai stuff
+if "OPENAI_API_KEY" not in os.environ:
+    os.environ["OPENAI_API_KEY"] = config("OPENAI_API_KEY")
 
 app = FastAPI(lifespan=lifespan)
 

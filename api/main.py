@@ -15,7 +15,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models as rest
 from langchain_core.vectorstores import VectorStoreRetriever
 
-from ollama_inference import initialize_qa_chain
+from llm_chain import initialize_llm_chain
 from lifespan import lifespan
 from models import Chat
 from auth import decode_jwt
@@ -201,7 +201,7 @@ async def generate_response(chat_id: str):
         return
 
     retriever = await get_retriever_for_user(chat["user_email"])
-    qa_chain = initialize_qa_chain(app.llm, retriever)
+    qa_chain = initialize_llm_chain(app.llm, retriever)
 
     last_human_message = None
     for message in reversed(chat["messages"]):

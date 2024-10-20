@@ -4,7 +4,7 @@ from langchain.schema import StrOutputParser
 from langchain.prompts import ChatPromptTemplate
 
 
-def initialize_qa_chain(llm: BaseLLM, retriever):
+def initialize_llm_chain(llm: BaseLLM, retriever):
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
 

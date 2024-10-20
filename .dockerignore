@@ -4,5 +4,4 @@
 .results
 scripts
 *Dockerfile*
-node_modules
-.env*
+node_modules/

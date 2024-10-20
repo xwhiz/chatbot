@@ -1,10 +1,10 @@
-from langchain_ollama import ChatOllama
+from langchain_core.language_models import BaseLLM
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema import StrOutputParser
 from langchain.prompts import ChatPromptTemplate
 
 
-def initialize_qa_chain(llm: ChatOllama, retriever):
+def initialize_qa_chain(llm: BaseLLM, retriever):
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
 

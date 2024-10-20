@@ -6,7 +6,7 @@ bcrypt
 langchain
 langchain_chroma
 langchain_community
-langchain_ollama
+langchain_openai
 langchain_huggingface
 langchain_qdrant
 pypdf

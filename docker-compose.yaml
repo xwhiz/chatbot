@@ -2,10 +2,10 @@ services:
   frontend:
     image: chatbot-frontend:latest
     build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile.frontend
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_API_URL: http://api:8000
         NEXT_PUBLIC_JWT_SECRET: asdflklasdjflkasjdlfjasdlfjalsdfvcxzvxqwetoyedfdzxcvmzxcvoitoadsfaxdcyxc
     ports:
       - "3000:3000"
@@ -18,7 +18,7 @@ services:
   api:
     image: chatbot-api:latest
     build:
-      context: ./chatbot-api
+      context: ./api
       dockerfile: Dockerfile.api
     ports:
       - "8000:8000"
@@ -28,9 +28,11 @@ services:
       JWT_SECRET: asdflklasdjflkasjdlfjasdlfjalsdfvcxzvxqwetoyedfdzxcvmzxcvoitoadsfaxdcyxc
       JWT_ALGORITHM: HS256
       SALT: $2b$12$9vO2O/oUIee.p6zjEOCA7u
+      OPENAI_API_KEY: sk-proj-BsiahkPyCrV79hWUFoqLT3BlbkFJB68DVt39wFq7ycYnkz3y
     volumes:
-      - ./chatbot-api:/app
-      - ./chatbot-api/uploaded_documents:/app/uploaded_documents
+      - ./api:/app
+      - ./api/uploaded_documents:/app/uploaded_documents
+      - ./api/vector_doc_db:/app/vector_doc_db
     restart: unless-stopped
     depends_on:
       - mongodb

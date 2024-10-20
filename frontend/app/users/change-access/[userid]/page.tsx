@@ -178,7 +178,7 @@ export default function Users() {
 
   const handleAddDocument = async () => {
     const { value: documentId } = await Swal.fire({
-      title: "Create Document",
+      title: "Select a document",
       html: `<select id="swal-input1" class="swal2-input w-full max-w-xs px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter document title">
         <option disabled selected value="">Select a document</option>
         ${
@@ -257,7 +257,7 @@ export default function Users() {
               </>
             ) : (
               <>
-                <FaFileCirclePlus /> Add document
+                <FaFileCirclePlus /> Grant Docs Access
               </>
             )}
           </button>

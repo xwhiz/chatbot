@@ -1,5 +1,11 @@
 #!/bin/bash
 
+cd frontend
+npm install
+npm run build
+cd ..
+
+
 docker compose up -d --build
 
 # Wait for the API to be up

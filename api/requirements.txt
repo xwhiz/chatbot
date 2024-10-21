@@ -4,10 +4,8 @@ python-decouple
 PyJWT
 bcrypt
 langchain
-langchain_chroma
 langchain_community
 langchain_openai
-langchain_huggingface
 langchain_qdrant
 pypdf
 qdrant_client

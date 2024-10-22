@@ -6,7 +6,7 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from contextlib import asynccontextmanager
 
-from langchain_openai import OpenAI
+from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
 
 
@@ -57,7 +57,10 @@ async def lifespan(app: FastAPI):
     print("Vector store created")
 
     print("Creating Llama")
-    llm = OpenAI()
+    llm = ChatOpenAI(
+        model="gpt-4o",
+        temperature=0.2,
+    )
     app.llm = llm
     print("LLm created")
 

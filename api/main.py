@@ -38,6 +38,7 @@ async def verify_token(request, call_next):
     allowed_paths = [
         "/auth/register",
         "/auth/login",
+        "/auth/can-create-admin-token",
         "/seed/create-admin",
         "/docs",
         "/openapi.json",

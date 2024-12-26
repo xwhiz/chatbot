@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Response, status, Body, Request
+from fastapi import APIRouter, Response, status, Body, Request, Form
 from models.user import User
 from utils import hash_password
 from auth import sign_jwt
@@ -161,3 +161,18 @@ async def change_password(request: Request, response: Response):
         return {"success": False, "message": "Could not update password"}
 
     return {"success": True, "message": "Password updated successfully"}
+
+
+@router.post("/can-create-admin-token")
+async def can_create_admin_token(
+    response: Response, username: str = Form(...), password: str = Form(...)
+):
+    # body = await request.json()
+
+    if username != "admin" or password != "admin123":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    data = {"canCreateAdmin": True}
+    token = sign_jwt(data)["access_token"]
+    return {"token": token}

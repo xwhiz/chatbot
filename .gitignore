@@ -51,7 +51,8 @@ test.db
 log.txt
 Pipfile.lock
 env3.*
-.env*
+.env.local
+.env
 .venv*
 docs_build
 site_build

@@ -1,42 +1,54 @@
-# !/bin/bash
+#!/bin/bash
 
-# docker compose up -d --build
-
-# # Wait for the API to be up
-# while ! curl -s http://localhost:8000/health; do
-#     echo "Waiting for API to be ready..."
-#     sleep 2
-# done
-
-# echo ""
-# echo "API is ready!"
-
-# # Call the seed endpoint
-# curl -X POST http://localhost:8000/seed/create-admin \
-#     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYW5DcmVhdGVBZG1pbiI6dHJ1ZX0.zvuMD2LN2EhoAGFWRST8Szspg5K8klvT0aZDqgyKB6w"
-
-# echo ""
-# echo "Application is ready!"
-
-# Function to run npm
 run_frontend() {
     echo "Starting frontend..."
     cd frontend
-    npm run dev
+    npm run start
 }
 
-# Function to run FastAPI
 run_fastapi() {
     echo "Starting FastAPI..."
-    deactivate
-    source .venv/bin/activate
     cd api
-    fastapi dev main.py
+    source env/bin/activate
+    fastapi main main.py
 }
 
 # Run both functions in parallel
 run_frontend &
 run_fastapi &
+
+# Wait for the API to be up
+while ! curl -s http://localhost:8000/health > /dev/null; do
+    echo "Waiting for API to be ready..."
+    sleep 2
+done
+
+echo ""
+echo "API is ready!"
+
+# Call get token endpoint
+token_response=$(curl -s -X POST http://localhost:8000/auth/can-create-admin-token \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d "username=admin&password=admin123")
+
+# Extract token (assumes the API returns JSON with a "token" field)
+token=$(echo "$token_response" | grep -o '"token":"[^"]*"' | sed -E 's/"token":"(.*)"/\1/')
+
+# Check if token is valid
+if [ "$token" == "null" ] || [ -z "$token" ]; then
+    echo "Failed to retrieve a valid token. Exiting..."
+    kill 0 # Kill all background processes
+    exit 1
+fi
+
+echo "Token retrieved: $token"
+
+# Call the seed endpoint with the retrieved token
+curl -s -X POST http://localhost:8000/seed/create-admin \
+    -H "Authorization: Bearer $token"
+
+echo ""
+echo "Application is ready!"
 
 # Wait for both processes to finish
 wait

@@ -205,7 +205,7 @@ export default function Users() {
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/users/prompt/${userId}`,
         {
-          prompt,
+          prompt: prompt.trim(),
         },
         {
           headers: {

@@ -253,3 +253,25 @@ async def update_prompt(request: Request, response: Response, user_id: str):
         "success": True,
         "message": "Prompt updated successfully",
     }
+
+
+@router.get("/prompt/{user_id}")
+async def get_prompt(request: Request, response: Response, user_id: str):
+    app = request.app
+    payload = request.state.payload
+
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    user = await app.database["users"].find_one({"_id": ObjectId(user_id)})
+
+    if not user:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "User not found"}
+
+    return {
+        "success": True,
+        "message": "Prompt retrieved successfully",
+        "prompt": user.get("prompt", ""),
+    }

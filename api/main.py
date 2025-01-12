@@ -195,8 +195,19 @@ async def generate_response(chat_id: str):
     if not chat:
         return
 
+    user_email = chat["user_email"]
+    user = await app.database["users"].find_one({"email": user_email})
+    if not user:
+        return
+
+    prompt = ""
+    if "prompt" in user:
+        prompt = user["prompt"]
+
+    print(user, prompt)
+
     retriever = await get_retriever_for_user(chat["user_email"])
-    qa_chain = initialize_qa_chain(app.llm, retriever, "Act like Sheldon Lee Cooper")
+    qa_chain = initialize_qa_chain(app.llm, retriever, prompt)
 
     last_human_message = None
     for message in reversed(chat["messages"]):

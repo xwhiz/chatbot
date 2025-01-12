@@ -178,9 +178,18 @@ export default function Users() {
   };
 
   const handleChangePrompt = async (userId: string) => {
+    const previousPrompt = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_URL}/users/prompt/${userId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
     const { value: prompt } = await Swal.fire({
       title: "Enter custom prompt for user",
-      html: `<textarea id="swal-input1" class="w-full max-w-xs h-40 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your prompt"></textarea>`,
+      html: `<textarea id="swal-input1" class="w-full max-w-xs h-40 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your prompt">${previousPrompt.data.prompt}</textarea>`,
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: "Update",
@@ -188,16 +197,22 @@ export default function Users() {
         const prompt = (
           document.getElementById("swal-input1") as HTMLInputElement
         ).value;
-
-        if (!prompt) {
-          Swal.showValidationMessage("Please provide the prompt text");
-          return false;
-        }
         return prompt;
       },
     });
 
-    if (!prompt) return;
+    if (prompt.length === 0) {
+      const { isConfirmed } = await Swal.fire({
+        title: "Are you sure to reset the prompt?",
+        text: "You are resetting the prompt for the user, you won't be able to revert this!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, reset it!",
+        cancelButtonText: "No, cancel!",
+      });
+
+      if (!isConfirmed) return;
+    }
 
     setIsPromptPosting(true);
 
@@ -219,7 +234,7 @@ export default function Users() {
     } catch (error: any) {
       const data = error.response;
       if (data) {
-        console.log(data.message);
+        console.log(data, data.message);
         toast.error(data.message);
       }
     } finally {

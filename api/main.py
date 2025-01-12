@@ -196,7 +196,7 @@ async def generate_response(chat_id: str):
         return
 
     retriever = await get_retriever_for_user(chat["user_email"])
-    qa_chain = initialize_qa_chain(app.llm, retriever)
+    qa_chain = initialize_qa_chain(app.llm, retriever, "Act like Sheldon Lee Cooper")
 
     last_human_message = None
     for message in reversed(chat["messages"]):
@@ -223,20 +223,6 @@ async def generate_response(chat_id: str):
 
     for chunk in stream:
         yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk}).strip()}\n\n"
-
-    # stream = ollama.chat(
-    #     model="llama3.1",
-    #     messages=[{"role": "user", "content": last_human_message["message"]}],
-    #     stream=True,
-    # )
-
-    # for chunk in stream:
-    #     yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk['message']['content']}).strip()}\n\n"
-
-    # words = "This is a streaming response from the chatbot.".split()
-    # for word in words:
-    #     yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': word})}\n\n"
-    #     await asyncio.sleep(0.05)  # Simulate delay between words
 
 
 @app.get("/generate-response")

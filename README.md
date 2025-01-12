@@ -132,3 +132,7 @@ fastapi run main.py
 ```
 
 fastapi run, runs the backend server on `http://0.0.0.0:8000`, so make sure to set the `NEXT_PUBLIC_API_URL` in the frontend to this URL.
+
+## Resolving bugs
+
+1. Note: if you are running the system after changes, please make sure to empty the database (development).

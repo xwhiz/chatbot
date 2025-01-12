@@ -203,7 +203,7 @@ export default function Users() {
 
     try {
       await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/prompt/${userId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/prompt/${userId}`,
         {
           prompt,
         },
@@ -215,7 +215,6 @@ export default function Users() {
       );
 
       setIsPromptPosting(false);
-
       toast.success("Prompt updated successfully");
     } catch (error: any) {
       const data = error.response;

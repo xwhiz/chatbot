@@ -10,6 +10,7 @@ import { toast } from "react-toastify";
 import TableCell from "@mui/material/TableCell";
 import CustomTable, { HeadCell } from "@/components/CustomTable";
 import Swal from "sweetalert2";
+import { Trash2Icon } from "lucide-react";
 
 type User = {
   _id: string;
@@ -52,6 +53,7 @@ export default function Users() {
   const [users, setUsers] = useState<User[]>([]);
   const [token, session] = useAuth();
   const [totalRecords, setTotalRecords] = useState(0);
+  const [isPromptPosting, setIsPromptPosting] = useState(false);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -175,6 +177,57 @@ export default function Users() {
     }
   };
 
+  const handleChangePrompt = async (userId: string) => {
+    const { value: prompt } = await Swal.fire({
+      title: "Enter custom prompt for user",
+      html: `<textarea id="swal-input1" class="w-full max-w-xs h-40 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your prompt"></textarea>`,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: "Update",
+      preConfirm: () => {
+        const prompt = (
+          document.getElementById("swal-input1") as HTMLInputElement
+        ).value;
+
+        if (!prompt) {
+          Swal.showValidationMessage("Please provide the prompt text");
+          return false;
+        }
+        return prompt;
+      },
+    });
+
+    if (!prompt) return;
+
+    setIsPromptPosting(true);
+
+    try {
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/prompt/${userId}`,
+        {
+          prompt,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setIsPromptPosting(false);
+
+      toast.success("Prompt updated successfully");
+    } catch (error: any) {
+      const data = error.response;
+      if (data) {
+        console.log(data.message);
+        toast.error(data.message);
+      }
+    } finally {
+      setIsPromptPosting(false);
+    }
+  };
+
   return (
     <WithSidebar>
       <div className="container mx-auto p-4 h-full overflow-auto scrollbar">
@@ -196,6 +249,12 @@ export default function Users() {
               <TableCell align="right">
                 {row.role !== "admin" && (
                   <div className="flex justify-end items-center flex-wrap">
+                    <button
+                      className="text-blue-500 hover:underline bg-none mr-2"
+                      onClick={() => handleChangePrompt(row._id)}
+                    >
+                      Change Prompt
+                    </button>
                     <Link
                       href={{
                         pathname: `/users/change-access/${row._id}`,
@@ -215,7 +274,7 @@ export default function Users() {
                       className="text-red-500 ml-2 hover:underline border-none bg-transparent"
                       onClick={() => handleDelete(row._id)}
                     >
-                      Delete
+                      <Trash2Icon />
                     </button>
                   </div>
                 )}

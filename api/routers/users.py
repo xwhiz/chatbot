@@ -216,3 +216,40 @@ async def add_doc_access_for_user(
         "success": True,
         "message": "Document access added successfully",
     }
+
+
+@router.post("/prompt/{user_id}")
+async def update_prompt(request: Request, response: Response, user_id: str):
+    app = request.app
+    payload = request.state.payload
+
+    if payload["role"] != "admin":
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"success": False, "message": "Unauthorized"}
+
+    user = await app.database["users"].find_one({"_id": ObjectId(user_id)})
+
+    if not user:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "User not found"}
+
+    body = await request.json()
+    if "prompt" not in body:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Missing prompt in request body"}
+
+    prompt = body["prompt"]
+    user["prompt"] = prompt
+
+    result = await app.database["users"].update_one(
+        {"_id": ObjectId(user_id)}, {"$set": user}
+    )
+    if not result.acknowledged:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Could not update prompt"}
+
+    response.status_code = status.HTTP_201_CREATED
+    return {
+        "success": True,
+        "message": "Prompt updated successfully",
+    }

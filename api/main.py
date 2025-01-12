@@ -204,8 +204,6 @@ async def generate_response(chat_id: str):
     if "prompt" in user:
         prompt = user["prompt"]
 
-    print(user, prompt)
-
     retriever = await get_retriever_for_user(chat["user_email"])
     qa_chain = initialize_qa_chain(app.llm, retriever, prompt)
 

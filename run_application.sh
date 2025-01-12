@@ -10,7 +10,7 @@ run_fastapi() {
     echo "Starting FastAPI..."
     cd api
     source env/bin/activate
-    fastapi main main.py
+    fastapi run main.py
 }
 
 # Run both functions in parallel

@@ -171,7 +171,6 @@ async def get_retriever_for_user(user_email: str) -> VectorStoreRetriever:
         )
 
     print("Accessible docs", accessible_docs)
-
     return app.vector_store.as_retriever(
         search_type="similarity",
         search_kwargs={
@@ -207,6 +206,8 @@ async def generate_response(chat_id: str):
 
     if not last_human_message:
         return
+
+    # TODO: add conversation history
 
     print("Generating response for:", last_human_message["message"])
     print(retriever.invoke(last_human_message["message"]))

@@ -9,8 +9,12 @@ def initialize_qa_chain(llm: ChatOllama, retriever):
         return "\n\n".join(doc.page_content for doc in docs)
 
     RAG_TEMPLATE = """
-    You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question as accurately as possible. If the context does not directly provide an answer, or if the question is unrelated to the context, use your general knowledge to respond appropriately and forget about the context.
-
+    You are an assistant designed for question-answering tasks. 
+    - Use the provided pieces of retrieved context to answer questions as accurately as possible. 
+    - When the context does not directly provide an answer, or when the question is unrelated to the context, 
+    - use your general knowledge to respond appropriately. 
+    - Avoid referencing the retrieved context when it is irrelevant to the question.
+    
     <context>
     {context}
     </context>

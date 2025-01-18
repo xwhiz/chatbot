@@ -10,7 +10,7 @@ run_frontend() {
 run_fastapi() {
     echo "Starting FastAPI..."
     cd api
-    source env/bin/activate
+    source venv/bin/activate
     fastapi run main.py
 }
 

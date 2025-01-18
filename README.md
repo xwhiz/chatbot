@@ -127,7 +127,7 @@ npm run start
 
 ```bash
 cd backend
-source env/bin/activate
+source venv/bin/activate
 fastapi run main.py
 ```
 

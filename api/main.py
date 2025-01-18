@@ -165,7 +165,7 @@ async def get_retriever_for_user(user_email: str) -> VectorStoreRetriever:
         return app.vector_store.as_retriever(
             search_type="similarity",
             search_kwargs={
-                "k": 10,
+                "k": 5,
                 "score_threshold": 0.2,
             },
         )
@@ -174,7 +174,7 @@ async def get_retriever_for_user(user_email: str) -> VectorStoreRetriever:
     return app.vector_store.as_retriever(
         search_type="similarity",
         search_kwargs={
-            "k": 10,
+            "k": 5,
             "score_threshold": 0.2,
             "filter": rest.Filter(
                 must=[

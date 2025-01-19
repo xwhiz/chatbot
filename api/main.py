@@ -231,8 +231,6 @@ async def generate_response(chat_id: str):
 
     context_length = 5
     context_string = get_context_string(context_length, chat)
-    print(context_string)
-
     retriever = await get_retriever_for_user(chat["user_email"])
     qa_chain = initialize_qa_chain(app.llm, retriever, prompt, context_string)
 
@@ -270,8 +268,6 @@ async def generate_response(chat_id: str):
 
     if is_instructions:
         return
-
-    # TODO: add conversation history
 
     print("Generating response for:", last_human_message["message"])
     print(retriever.invoke(last_human_message["message"]))

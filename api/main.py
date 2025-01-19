@@ -190,10 +190,35 @@ async def get_retriever_for_user(user_email: str) -> VectorStoreRetriever:
     )
 
 
+def get_context_string(length: int, chat: dict) -> str:
+    pairs = []
+    pair = []
+    for message in chat["messages"]:
+        if message['sender'] == 'human':
+            pair = [f"Human: `{message['message']}`"]
+        else:
+            pair.append(f"Assistant: `{message['message']}")
+
+        if len(pair) == 2:
+            pairs.append(pair)
+            pair = []
+
+    context_pairs = []
+    for pair in reversed(pairs):
+        context_pairs.append(pair)
+        if len(context_pairs) == length:
+            break
+
+    context_pairs.reverse()
+    context_string = "\n".join([f"{a}\n{b}" for a, b in context_pairs])
+    return context_string
+
+
 async def generate_response(chat_id: str):
     chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
     if not chat:
         return
+    
 
     user_email = chat["user_email"]
     user = await app.database["users"].find_one({"email": user_email})
@@ -204,8 +229,12 @@ async def generate_response(chat_id: str):
     if "prompt" in user:
         prompt = user["prompt"]
 
+    context_length = 5
+    context_string = get_context_string(context_length, chat)
+    print(context_string)
+
     retriever = await get_retriever_for_user(chat["user_email"])
-    qa_chain = initialize_qa_chain(app.llm, retriever, prompt)
+    qa_chain = initialize_qa_chain(app.llm, retriever, prompt, context_string)
 
     last_human_message = None
     for message in reversed(chat["messages"]):
@@ -214,6 +243,32 @@ async def generate_response(chat_id: str):
             break
 
     if not last_human_message:
+        return
+
+
+    is_instructions = False
+    if (
+        "[NOTE]" in last_human_message["message"].upper()
+        or "[TAKE NOTE]" in last_human_message["message"].upper()
+        or "[TAKENOTE]" in last_human_message["message"].upper()
+    ):
+        is_instructions = True
+
+        user["prompt"] += "\n" + last_human_message["message"].lower().replace(
+            "[note]", ""
+        ).replace("[take note]", "").replace("[takenote]", "")
+
+        result = await app.database["users"].update_one(
+            {"_id": ObjectId(user["_id"])}, {"$set": user}
+        )
+
+        if not result.acknowledged:
+            yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': 'Unable to save your instructions. Please try again.'})}\n\n"
+            return
+        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': 'Provided instructions has been saved.'})}\n\n"
+        return
+
+    if is_instructions:
         return
 
     # TODO: add conversation history

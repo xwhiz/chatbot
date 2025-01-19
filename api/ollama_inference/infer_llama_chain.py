@@ -4,7 +4,7 @@ from langchain.schema import StrOutputParser
 from langchain.prompts import ChatPromptTemplate
 
 
-def initialize_qa_chain(llm: ChatOllama, retriever, custom_prompt: str):
+def initialize_qa_chain(llm: ChatOllama, retriever, custom_prompt: str, context: str):
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
 
@@ -18,6 +18,7 @@ def initialize_qa_chain(llm: ChatOllama, retriever, custom_prompt: str):
     - Avoid referencing the retrieved context when it is irrelevant to the question.
     
     <context>
+    ###Previous Chat Context: previous_chat_context###
     {context}
     </context>
 
@@ -25,6 +26,7 @@ def initialize_qa_chain(llm: ChatOllama, retriever, custom_prompt: str):
     {question}
     """
     RAG_TEMPLATE = RAG_TEMPLATE.replace("custom_prompt", custom_prompt)
+    RAG_TEMPLATE = RAG_TEMPLATE.replace("previous_chat_context", context)
 
     rag_prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
     qa_chain = (

@@ -62,7 +62,7 @@ async def lifespan(app: FastAPI):
     # print("Retriever created")
 
     print("Creating Llama")
-    llm = ChatOllama(model="llama3.1")
+    llm = ChatOllama(model="deepseek-r1:14b")
     app.llm = llm
     print("LLm created")
 

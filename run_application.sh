@@ -3,8 +3,8 @@
 run_frontend() {
     echo "Starting frontend..."
     cd frontend
-    npm run build
-    npm run start
+    sudo npm run build
+    sudo npm run start
 }
 
 run_fastapi() {

@@ -12,6 +12,7 @@ import { useUserChatsStore } from "@/stores/userChatsStore";
 import { toast } from "react-toastify";
 import { useActiveChat } from "@/stores/activeChat";
 import { useIsGeneratingStore } from "@/stores/useIsGeneratingStore";
+import Swal from "sweetalert2";
 
 export default function Home() {
   const router = useRouter();
@@ -226,6 +227,28 @@ export default function Home() {
     }
   };
 
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedModel(e.target.value);
+    toast.promise(
+      axios.post(
+        process.env.NEXT_PUBLIC_API_URL + `/change-model`,
+        {
+          model: e.target.value,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      ),
+      {
+        pending: "Changing model...",
+        success: "Model changed",
+        error: "An error occurred",
+      }
+    );
+  };
+
   return (
     <WithSidebar>
       <div className="relative max-w-[50rem] w-full mx-auto h-full flex flex-col">
@@ -254,7 +277,7 @@ export default function Home() {
           <div className="flex items-center justify-between mt-2">
             <select
               value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
+              onChange={handleModelChange}
               className="p-2 border rounded bg-slate-100"
             >
               {models.map((model) => (

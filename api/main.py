@@ -13,6 +13,7 @@ from decouple import config
 from qdrant_client import QdrantClient
 from qdrant_client.http import models as rest
 from langchain_core.vectorstores import VectorStoreRetriever
+from langchain_ollama import ChatOllama
 
 from ollama_inference import initialize_qa_chain
 from lifespan import lifespan
@@ -352,6 +353,19 @@ async def update_chat(request: Request):
         ),
     )
 
+
+@app.post("/change-model")
+async def change_model(response: Response, request: Request):
+    body = await request.json()
+    model = body.get("model")
+    if model is None:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"success": False, "message": "Model is required"}
+    
+
+    app.llm = ChatOllama(model=model)
+    response.status_code = status.HTTP_200_OK
+    return {"success": True, "message": f"Changed LLM model to {model}"}
 
 # A health endpoint
 @app.get("/health")

@@ -3,6 +3,7 @@
 run_frontend() {
     echo "Starting frontend..."
     cd frontend
+    sudo rm -rf .next
     sudo npm run build
     sudo npm run start
 }

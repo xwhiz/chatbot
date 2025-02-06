@@ -32,7 +32,6 @@ export default function Home() {
   ]);
   const [selectedModel, setSelectedModel] = useState<string>(models[0]);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const chatRef = useRef<HTMLDivElement>(null);
 
   const [token, sessionInformation] = useAuth();
 
@@ -273,10 +272,7 @@ export default function Home() {
   return (
     <WithSidebar>
       <div className="relative max-w-[50rem] w-full mx-auto h-full flex flex-col">
-        <MessagesFromActiveChatState
-          chatRef={chatRef}
-          message={messageState.message}
-        />
+        <MessagesFromActiveChatState message={messageState.message} />
 
         {messageState.isGenerating && (
           <div className="flex justify-center items-center h-16">

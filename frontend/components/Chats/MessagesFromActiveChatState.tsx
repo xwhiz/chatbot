@@ -5,12 +5,11 @@ import { FaCopy } from "react-icons/fa6";
 import { useActiveChat } from "@/stores/activeChat";
 
 export default function MessagesFromActiveChatState({
-  chatRef,
   message,
 }: {
-  chatRef: React.RefObject<HTMLDivElement>;
   message: string | null;
 }) {
+  const chatRef = useRef<HTMLDivElement>(null);
   const { chat } = useActiveChat();
 
   // scroll to the bottom of the chat

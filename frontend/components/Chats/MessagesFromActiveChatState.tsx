@@ -21,7 +21,7 @@ export default function MessagesFromActiveChatState({
 
   return (
     <section
-      className="container mx-auto p-4 md:p-6 lg:p-8 overflow-y-auto scrollbar flex-1"
+      className="p-4 mt-8 md:p-6 lg:p-8 overflow-y-auto scrollbar flex-1"
       ref={chatContainer}
     >
       {chat.messages.length === 0 && (

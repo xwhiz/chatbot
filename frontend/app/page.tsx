@@ -12,7 +12,6 @@ import { useUserChatsStore } from "@/stores/userChatsStore";
 import { toast } from "react-toastify";
 import { useActiveChat } from "@/stores/activeChat";
 import { useIsGeneratingStore } from "@/stores/useIsGeneratingStore";
-import Swal from "sweetalert2";
 
 export default function Home() {
   const router = useRouter();
@@ -33,6 +32,7 @@ export default function Home() {
   ]);
   const [selectedModel, setSelectedModel] = useState<string>(models[0]);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
 
   const [token, sessionInformation] = useAuth();
 
@@ -42,6 +42,13 @@ export default function Home() {
     textArea.style.height = "auto";
     textArea.style.height = Math.min(textArea.scrollHeight, 120) + "px"; // Max height ~5 lines
   };
+
+  // .forEach((item) => {
+  //   console.log(item);
+  //   item.addEventListener("click", () => {
+  //     console.log("Hello world");
+  //   });
+  // });
 
   useEffect(() => {
     if (!sessionInformation) {
@@ -183,12 +190,26 @@ export default function Home() {
         const data = JSON.parse(event.data);
         currentMessage += data.partial_response;
 
+        currentMessage = currentMessage.replace(
+          "<think>",
+          "<div class='thinking' data-state='open'>"
+        );
+        currentMessage = currentMessage.replace("</think>", "</div>");
+
         setMessageState({ isGenerating: false, message: currentMessage });
       };
 
       // @ts-ignore
       eventSource.onclose = async () => {
         try {
+          currentMessage = currentMessage.replace(
+            "<think>",
+            "<div class='thinking' data-state='open'>"
+          );
+          currentMessage = currentMessage.replace("</think>", "</div>");
+
+          console.log(currentMessage);
+
           await axios.post(
             `${process.env.NEXT_PUBLIC_API_URL}/update-chat`,
             { chat_id: id, full_message: currentMessage.trim() },
@@ -252,7 +273,10 @@ export default function Home() {
   return (
     <WithSidebar>
       <div className="relative max-w-[50rem] w-full mx-auto h-full flex flex-col">
-        <MessagesFromActiveChatState message={messageState.message} />
+        <MessagesFromActiveChatState
+          chatRef={chatRef}
+          message={messageState.message}
+        />
 
         {messageState.isGenerating && (
           <div className="flex justify-center items-center h-16">
@@ -279,6 +303,7 @@ export default function Home() {
               value={selectedModel}
               onChange={handleModelChange}
               className="p-2 border rounded bg-slate-100"
+              disabled={messageState.isGenerating}
             >
               {models.map((model) => (
                 <option key={model} value={model}>

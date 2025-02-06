@@ -20,3 +20,17 @@
     background-color: rgba(0, 0, 0, 0.3);
   }
 }
+
+.thinking {
+  @apply text-gray-700 pl-4 border-l-2 border-gray-700;
+}
+.thinking::before {
+  content: "Thinking:";
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.thinking:hover::before {
+  content: "Thinking: (click to open/close)";
+  cursor: pointer;
+}

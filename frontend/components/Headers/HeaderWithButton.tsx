@@ -5,7 +5,7 @@ import Link from "next/link";
 export default function HeaderWithButton() {
   const { toggle } = useSidebarStore();
   return (
-    <nav className="w-full flex flex-wrap items-center justify-between px-2 py-3 navbar-expand-lg bg-white">
+    <nav className="absolute top-0 left-0 right-0 w-full flex flex-wrap items-center justify-between px-2 py-3 navbar-expand-lg bg-transparent z-10">
       <div className="container px-4 mx-auto flex flex-wrap items-center justify-between">
         <div className="w-full relative flex gap-4 items-center justify-start">
           <button

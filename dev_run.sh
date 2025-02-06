@@ -3,16 +3,14 @@
 run_frontend() {
     echo "Starting frontend..."
     cd frontend
-    sudo rm -rf .next
-    sudo npm run build
-    sudo npm run start
+    sudo npm run dev
 }
 
 run_fastapi() {
     echo "Starting FastAPI..."
     cd api
     source venv/bin/activate
-    fastapi run main.py
+    fastapi dev main.py
 }
 
 # Run both functions in parallel

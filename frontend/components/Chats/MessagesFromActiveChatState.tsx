@@ -9,20 +9,31 @@ export default function MessagesFromActiveChatState({
 }: {
   message: string | null;
 }) {
-  const chatContainer = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
   const { chat } = useActiveChat();
 
   // scroll to the bottom of the chat
   useEffect(() => {
-    if (chatContainer.current) {
-      chatContainer.current.scrollTop = chatContainer.current.scrollHeight;
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
     }
   });
 
+  const items = chatRef.current?.querySelectorAll(".thinking");
+  if (items) {
+    let nodes = Array.from(items);
+    nodes.forEach((node) => {
+      console.log(node);
+      node.addEventListener("click", () => {
+        console.log("Hello there");
+      });
+    });
+  }
+
   return (
     <section
-      className="container mx-auto p-4 md:p-6 lg:p-8 overflow-y-auto scrollbar flex-1"
-      ref={chatContainer}
+      className="p-4 mt-8 md:p-6 lg:p-8 overflow-y-auto scrollbar flex-1"
+      ref={chatRef}
     >
       {chat.messages.length === 0 && (
         <>

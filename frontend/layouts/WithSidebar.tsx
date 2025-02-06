@@ -9,7 +9,7 @@ export default function WithSidebar({
   return (
     <div className="flex">
       <Sidebar />
-      <div className="relative h-screen w-full overflow-hidden flex flex-col">
+      <div className="relative flex-1 h-screen w-full overflow-idden flex flex-col">
         <HeaderWithButton />
 
         {children}

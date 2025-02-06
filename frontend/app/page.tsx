@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaArrowCircleUp } from "react-icons/fa";
 import WithSidebar from "@/layouts/WithSidebar";
 import { useRouter } from "next/navigation";
@@ -25,7 +25,29 @@ export default function Home() {
   }>({ isGenerating: false, message: "" });
   const { setIsGenerating } = useIsGeneratingStore();
 
+  const [models, setModels] = useState<string[]>([
+    "llama3.1",
+    "deepseek-r1:14b",
+    "qwen2.5:14b",
+  ]);
+  const [selectedModel, setSelectedModel] = useState<string>(models[0]);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
   const [token, sessionInformation] = useAuth();
+
+  const autoResize = () => {
+    const textArea: HTMLTextAreaElement | null = textAreaRef.current;
+    if (!textArea) return;
+    textArea.style.height = "auto";
+    textArea.style.height = Math.min(textArea.scrollHeight, 120) + "px"; // Max height ~5 lines
+  };
+
+  // .forEach((item) => {
+  //   console.log(item);
+  //   item.addEventListener("click", () => {
+  //     console.log("Hello world");
+  //   });
+  // });
 
   useEffect(() => {
     if (!sessionInformation) {
@@ -54,7 +76,12 @@ export default function Home() {
     };
 
     fetchChats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeChatId, sessionInformation, token]);
+
+  useEffect(() => {
+    autoResize();
+  }, [inputMessage]);
 
   if (!sessionInformation) {
     return null;
@@ -64,11 +91,24 @@ export default function Home() {
     router.push("/dashboard");
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
       setIsGenerating(true);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputMessage(e.target.value);
+    autoResize();
+  };
+
+  const send = () => {
+    if (inputMessage.trim()) {
+      sendMessage();
+      setInputMessage("");
+      autoResize();
     }
   };
 
@@ -149,12 +189,26 @@ export default function Home() {
         const data = JSON.parse(event.data);
         currentMessage += data.partial_response;
 
+        currentMessage = currentMessage.replace(
+          "<think>",
+          "<div class='thinking' data-state='open'>"
+        );
+        currentMessage = currentMessage.replace("</think>", "</div>");
+
         setMessageState({ isGenerating: false, message: currentMessage });
       };
 
       // @ts-ignore
       eventSource.onclose = async () => {
         try {
+          currentMessage = currentMessage.replace(
+            "<think>",
+            "<div class='thinking' data-state='open'>"
+          );
+          currentMessage = currentMessage.replace("</think>", "</div>");
+
+          console.log(currentMessage);
+
           await axios.post(
             `${process.env.NEXT_PUBLIC_API_URL}/update-chat`,
             { chat_id: id, full_message: currentMessage.trim() },
@@ -193,34 +247,74 @@ export default function Home() {
     }
   };
 
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedModel(e.target.value);
+    toast.promise(
+      axios.post(
+        process.env.NEXT_PUBLIC_API_URL + `/change-model`,
+        {
+          model: e.target.value,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      ),
+      {
+        pending: "Changing model...",
+        success: "Model changed",
+        error: "An error occurred",
+      }
+    );
+  };
+
   return (
     <WithSidebar>
-      <MessagesFromActiveChatState message={messageState.message} />
+      <div className="relative max-w-[50rem] w-full mx-auto h-full flex flex-col">
+        <MessagesFromActiveChatState message={messageState.message} />
 
-      {messageState.isGenerating && (
-        <div className="flex justify-center items-center h-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+        {messageState.isGenerating && (
+          <div className="flex justify-center items-center h-16">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
 
-          <p className="ml-2">Retrieving relevent data...</p>
-        </div>
-      )}
+            <p className="ml-2">Retrieving relevent data...</p>
+          </div>
+        )}
 
-      <div className="p-4 border-t">
-        <div className="relative">
-          <input
-            type="text"
+        <div className="bg-slate-200 border-t p-1 absolut w-full bottom-0 rounded-t-lg">
+          <textarea
+            ref={textAreaRef}
             value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyUp={handleKeyPress}
-            className="w-full p-2 pr-12 border rounded"
-            placeholder={"Type your message..."}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyPress}
+            className="w-full p-2 rounded resize-none overflow-y-auto max-h-[120px] outline-none bg-slate-100"
+            placeholder="Type your message..."
+            rows={1}
+            autoFocus
           />
-          <button
-            onClick={sendMessage}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-blue-500 rounded-full"
-          >
-            <FaArrowCircleUp className="w-6 h-6" />
-          </button>
+
+          <div className="flex items-center justify-between mt-2">
+            <select
+              value={selectedModel}
+              onChange={handleModelChange}
+              className="p-2 border rounded bg-slate-100"
+              disabled={messageState.isGenerating}
+            >
+              {models.map((model) => (
+                <option key={model} value={model}>
+                  {model}
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={send}
+              className="p-2 text-blue-500 rounded-full hover:bg-gray-400"
+            >
+              <FaArrowCircleUp className="w-6 h-6" />
+            </button>
+          </div>
         </div>
       </div>
     </WithSidebar>

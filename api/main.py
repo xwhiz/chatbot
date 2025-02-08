@@ -15,7 +15,7 @@ from qdrant_client.http import models as rest
 from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_ollama import ChatOllama
 
-from ollama_inference import initialize_qa_chain
+from model_inference import initialize_qa_chain
 from lifespan import lifespan
 from models import Chat
 from auth import decode_jwt

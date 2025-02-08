@@ -25,12 +25,12 @@ export default function Home() {
   }>({ isGenerating: false, message: "" });
   const { setIsGenerating } = useIsGeneratingStore();
 
-  const [models, setModels] = useState<string[]>([
-    "llama3.1",
-    "deepseek-r1:14b",
-    "qwen2.5:14b",
+  const [models, setModels] = useState<{ name: string; modelName: string }[]>([
+    { name: "llama3.1", modelName: "llama3.1:8b" },
+    { name: "DeepSeek-r1", modelName: "deepseek-r1:14b" },
+    { name: "Qwen2.5", modelName: "qwen2.5:14b" },
   ]);
-  const [selectedModel, setSelectedModel] = useState<string>(models[0]);
+  const [selectedModel, setSelectedModel] = useState<number>(0);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   const [token, sessionInformation] = useAuth();
@@ -203,9 +203,13 @@ export default function Home() {
         try {
           currentMessage = currentMessage.replace(
             "<think>",
-            "<div class='thinking' data-state='open'>"
+            "<div class='thinking' data-state='closed'>"
           );
           currentMessage = currentMessage.replace("</think>", "</div>");
+          currentMessage = currentMessage.replace(
+            "<div class='thinking' data-state='open'>",
+            "<div class='thinking' data-state='closed'>"
+          );
 
           console.log(currentMessage);
 
@@ -248,7 +252,8 @@ export default function Home() {
   };
 
   const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedModel(e.target.value);
+    const value = e.target.value;
+    setSelectedModel(models.findIndex((m) => m.modelName === value));
     toast.promise(
       axios.post(
         process.env.NEXT_PUBLIC_API_URL + `/change-model`,
@@ -296,14 +301,14 @@ export default function Home() {
 
           <div className="flex items-center justify-between mt-2">
             <select
-              value={selectedModel}
+              value={models[selectedModel].modelName}
               onChange={handleModelChange}
               className="p-2 border rounded bg-slate-100"
               disabled={messageState.isGenerating}
             >
               {models.map((model) => (
-                <option key={model} value={model}>
-                  {model}
+                <option key={model.modelName} value={model.modelName}>
+                  {model.name}
                 </option>
               ))}
             </select>

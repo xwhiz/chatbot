@@ -34,3 +34,11 @@
   content: "Thinking: (click to open/close)";
   cursor: pointer;
 }
+
+.thinking[data-state="open"] {
+  height: auto;
+}
+.thinking[data-state="closed"] {
+  height: 2rem;
+  overflow: hidden;
+}

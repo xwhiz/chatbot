@@ -26,7 +26,7 @@ export default function Home() {
   const { setIsGenerating } = useIsGeneratingStore();
 
   const [models, setModels] = useState<{ name: string; modelName: string }[]>([
-    { name: "llama3.1", modelName: "llama3.1" },
+    { name: "llama3.1", modelName: "llama3.1:8b" },
     { name: "DeepSeek-r1", modelName: "deepseek-r1:14b" },
     { name: "Qwen2.5", modelName: "qwen2.5:14b" },
   ]);

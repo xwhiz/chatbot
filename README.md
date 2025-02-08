@@ -82,15 +82,17 @@ Now the backend is ready to be served.
 
 First of all, you need to have Ollama installed on your system. If you don't have it, you can download it from [here](https://ollama.com/download/mac)
 
+### Download the required models
+
 Then in the terminal, run the following command to start the Ollama server:
 
 ```bash
-ollama run ollama3.1
+ollama pull ollama3.1
+ollama pull deepseek-r1:14b
+ollama pull qwen2.5:14b
 ```
 
 This will install the required dependencies and start the server.
-
-Then exit from the Ollama server by typing `/bye` in the Ollama terminal.
 
 ### Setup the MongoDB
 
@@ -132,6 +134,12 @@ fastapi run main.py
 ```
 
 fastapi run, runs the backend server on `http://0.0.0.0:8000`, so make sure to set the `NEXT_PUBLIC_API_URL` in the frontend to this URL.
+
+### Or run the script to run the whole system at once.
+
+```bash
+sudo ./run_application.sh
+```
 
 ## Resolving bugs
 

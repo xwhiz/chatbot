@@ -2,14 +2,21 @@ from langchain_ollama import ChatOllama
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema import StrOutputParser
 from langchain.prompts import ChatPromptTemplate
+from datetime import datetime
+
+def current_date() -> str:
+    return datetime.now().strftime("%Y-%m-%d %A")
 
 
-def initialize_qa_chain(llm: ChatOllama, retriever, custom_prompt: str, context: str):
+
+def initialize_qa_chain(llm: ChatOllama, retriever, user_custom_prompt: str, context: str):
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
 
     RAG_TEMPLATE = """
-    Your role: ###custom_prompt###
+    Your role: ###%s###
+
+    NOTE: For your information, present date is ### %s ###
 
     You are an assistant designed for question-answering tasks. 
     - Use the provided pieces of retrieved context to answer questions as accurately as possible. 
@@ -18,15 +25,13 @@ def initialize_qa_chain(llm: ChatOllama, retriever, custom_prompt: str, context:
     - Avoid referencing the retrieved context when it is irrelevant to the question.
     
     <context>
-    ###Previous Chat Context: previous_chat_context###
+    ###Previous Chat Context: %s###
     {context}
     </context>
 
     Answer the following question:
     {question}
-    """
-    RAG_TEMPLATE = RAG_TEMPLATE.replace("custom_prompt", custom_prompt)
-    RAG_TEMPLATE = RAG_TEMPLATE.replace("previous_chat_context", context)
+    """ % (user_custom_prompt, current_date(), context)
 
     rag_prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
     qa_chain = (

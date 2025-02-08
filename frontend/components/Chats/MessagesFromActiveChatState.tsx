@@ -11,6 +11,7 @@ export default function MessagesFromActiveChatState({
 }) {
   const chatRef = useRef<HTMLDivElement>(null);
   const { chat } = useActiveChat();
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // scroll to the bottom of the chat
   useEffect(() => {
@@ -19,15 +20,16 @@ export default function MessagesFromActiveChatState({
     }
   });
 
-  const items = chatRef.current?.querySelectorAll(".thinking");
-  if (items) {
-    let nodes = Array.from(items);
-    nodes.forEach((node) => {
-      console.log(node);
-      node.addEventListener("click", () => {
-        console.log("Hello there");
-      });
-    });
+  function handleMessageClick(e: React.MouseEvent<HTMLDivElement>) {
+    const target = e.target as HTMLDivElement;
+    if (!target.classList.contains("thinking")) return;
+
+    if (target.dataset.state === "open") {
+      target.dataset.state = "closed";
+    } else {
+      target.dataset.state = "open";
+    }
+    console.log(target);
   }
 
   return (
@@ -47,7 +49,7 @@ export default function MessagesFromActiveChatState({
         </>
       )}
 
-      <div className="flex flex-col gap-4 mt-8">
+      <div className="flex flex-col gap-4 mt-8" ref={messagesContainerRef}>
         {chat.messages.map((m, i) => (
           <div
             key={i}
@@ -61,6 +63,7 @@ export default function MessagesFromActiveChatState({
                   ? "bg-slate-700 text-white"
                   : "bg-slate-200 text-slate-800"
               }`}
+              onClick={handleMessageClick}
               dangerouslySetInnerHTML={{ __html: marked.parse(m.message) }}
             ></div>
 

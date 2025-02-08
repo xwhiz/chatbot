@@ -203,9 +203,13 @@ export default function Home() {
         try {
           currentMessage = currentMessage.replace(
             "<think>",
-            "<div class='thinking' data-state='open'>"
+            "<div class='thinking' data-state='closed'>"
           );
           currentMessage = currentMessage.replace("</think>", "</div>");
+          currentMessage = currentMessage.replace(
+            "<div class='thinking' data-state='open'>",
+            "<div class='thinking' data-state='closed'>"
+          );
 
           console.log(currentMessage);
 

@@ -36,14 +36,14 @@ async def lifespan(app: FastAPI):
         print(f"Creating collection: {collection_name}")
         client.create_collection(
             collection_name=collection_name,
-            vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+            vectors_config=VectorParams(size=1024, distance=Distance.COSINE, on_disk=True),
         )
 
     app.client = client
     print("Qdrant client created")
 
     print("Creating embeddings")
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-m3")
     print("Embeddings created")
 
     print("Creating vector store")

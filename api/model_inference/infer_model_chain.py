@@ -16,7 +16,7 @@ def initialize_qa_chain(llm: ChatOllama, retriever, user_custom_prompt: str, con
     RAG_TEMPLATE = """
     Your role: ###%s###
 
-    NOTE: For your information, present date is ### %s ###
+    NOTE: You must not forget that todays date is ### %s ###
 
     You are an assistant designed for question-answering tasks. 
     - Use the provided pieces of retrieved context to answer questions as accurately as possible. 
@@ -32,6 +32,9 @@ def initialize_qa_chain(llm: ChatOllama, retriever, user_custom_prompt: str, con
     Answer the following question:
     {question}
     """ % (user_custom_prompt, current_date(), context)
+
+    print("\r\nDEBUG:", RAG_TEMPLATE, "\r\n")
+
 
     rag_prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
     qa_chain = (

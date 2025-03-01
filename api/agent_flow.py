@@ -99,24 +99,20 @@ def query_router(state: ChatState):
     {state.get('rag_results', 'No RAG results available')}
 
     Available tools:
-    - "time_tool": Use this when the query requires the **current date, time, or any reasoning based on the present moment** (e.g., "What day is it?", "How many days until an event?").  
-    - "rag": Use this when the **query asks for factual knowledge that is NOT explicitly known to the model or current context** (e.g., "Who is [someone]?", "What are the details of [X]?").  
+    - "time_tool": Use this when the query requires the **current date, time, or any reasoning based on the present moment** (e.g., "What day is it?", "How many days until an event?").
+    - "rag": Use this when the **query asks for factual knowledge that is NOT explicitly known to the model or current context** (e.g., "Who is [someone]?", "What are the details of [X]?").
     - "direct": Use this when the model **can confidently answer from its built-in knowledge OR the context already contains the answer** without requiring external retrieval.
 
-    ### **Output Format (STRICTLY FOLLOW THIS)**
-    - **Return ONLY a JSON object and NOTHING ELSE.**
-    - **Do NOT include explanations, text, or extra characters.**
-    - **Ensure the output is valid JSON with no surrounding text.**
-    - **If you generate anything other than the JSON, the response is INVALID.**
-    - **Do NOT use triple backticks or markdown formatting.**
-    - DON'T GIVE ME RESPONSE IN FUCKING MARKDOWN FORMAT. GIVE IT TO ME JUST PLAINTEXT AND VALID JSON.
+    Guidelines:
+    - You must rate each tool completely independent of others. The rating will show how relevant is the tool to the query of user with respect to the context and retrieved documents.
+    - Scores must be in the range of 0 to 100.
+    - Always return all three keys in the output, even if some scores are low.
+    - OUTPUT MUST BE JUST THE THINGS I HAVE MENTIONED IN THE FOLLOWING TEXT. NO TEXT, EXPLANATIONS OR ANYTHING ELSE IS REQUIRED. ONLY THE THREE LINES OF OUTPUT.
+    - Return output in this exact format:
 
-    #### **Return JSON in this EXACT format:**
-    {{
-        "time_tool": <confidence_score>,
-        "rag": <confidence_score>,
-        "direct": <confidence_score>
-    }}
+    time_tool: <confidence_score>  
+    rag: <confidence_score>  
+    direct: <confidence_score>
     """
 
     
@@ -128,10 +124,9 @@ def query_router(state: ChatState):
             response = str(response)
         
         logger.info(f"Classification response: {response}")
-        rating = json.loads(response)
-        logger.info(f"Classification rating: {rating}")
+        ratings = response.split("\n")
+        rating = {r.split(":")[0].strip(): int(r.split(":")[1].strip()) for r in ratings}
 
-        
         query_type = "time_tool"
         for key, value in rating.items():
             if rating[query_type] < value:

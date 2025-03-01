@@ -19,46 +19,6 @@ logger = logging.getLogger(__name__)
 # Initialize the agent graph
 agent_graph = build_agent_graph()
 
-async def get_retriever_for_user(app, user_email: str):
-    """
-    Get a retriever configured for the specific user.
-    Reuses the existing implementation from main.py.
-    """
-    try:
-        user = await app.database["users"].find_one(
-            {"email": user_email}, {"accessible_docs": 1}
-        )
-
-        if not user:
-            logger.warning(f"User not found: {user_email}")
-            return None
-
-        accessible_docs = user.get("accessible_docs", [])
-
-        if "all" in accessible_docs:
-            return app.vector_store.as_retriever(
-                search_type="similarity",
-                search_kwargs={
-                    "k": 5,
-                    "score_threshold": 0.2,
-                },
-            )
-
-        logger.info(f"User {user_email} has access to documents: {accessible_docs}")
-        
-        # Create a filtered retriever
-        return app.vector_store.as_retriever(
-            search_type="similarity",
-            search_kwargs={
-                "k": 5,
-                "score_threshold": 0.2,
-                "filter": {"metadata.document_id": {"$in": accessible_docs}},
-            },
-        )
-    except Exception as e:
-        logger.error(f"Error getting retriever for user {user_email}: {e}")
-        return None
-
 def get_context_from_history(messages: List[Dict], max_pairs: int = 5):
     """
     Extract conversation context from message history.
@@ -144,8 +104,40 @@ async def generate_agentic_response(app, chat_id: str):
         # Get custom prompt if available
         custom_prompt = user.get("prompt", "")
         
-        # Get retriever for the user
-        retriever = await get_retriever_for_user(app, user_email)
+        # Get retriever for the user - use app.get_retriever_for_user directly
+        # to avoid circular imports
+        try:
+            user_info = await app.database["users"].find_one(
+                {"email": user_email}, {"accessible_docs": 1}
+            )
+
+            if not user_info:
+                logger.warning(f"User not found when getting retriever: {user_email}")
+                retriever = None
+            else:
+                accessible_docs = user_info.get("accessible_docs", [])
+
+                if "all" in accessible_docs:
+                    retriever = app.vector_store.as_retriever(
+                        search_type="similarity",
+                        search_kwargs={
+                            "k": 5,
+                            "score_threshold": 0.2,
+                        },
+                    )
+                else:
+                    logger.info(f"User {user_email} has access to documents: {accessible_docs}")
+                    retriever = app.vector_store.as_retriever(
+                        search_type="similarity",
+                        search_kwargs={
+                            "k": 5,
+                            "score_threshold": 0.2,
+                            "filter": {"metadata.document_id": {"$in": accessible_docs}},
+                        },
+                    )
+        except Exception as e:
+            logger.error(f"Error getting retriever for user {user_email}: {e}")
+            retriever = None
         
         # Set up the initial state for the agent
         state = ChatState(
@@ -212,7 +204,9 @@ async def generate_streaming_response(app, chat_id: str) -> AsyncGenerator[str, 
         # Stream the response in chunks
         for i in range(0, len(full_response), chunk_size):
             chunk = full_response[i:i+chunk_size]
-            yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk})}\n\n"
+            # For backward compatibility, send the full accumulated text so far, not just the new chunk
+            accumulated_text = full_response[:i+chunk_size]
+            yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': accumulated_text})}\n\n"
             await asyncio.sleep(0.05)  # Small delay to simulate streaming
         
         # Signal completion

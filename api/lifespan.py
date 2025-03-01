@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI):
         logger.info(f"Creating collection: {collection_name}")
         client.create_collection(
             collection_name=collection_name,
-            vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+            vectors_config=VectorParams(size=1024, distance=Distance.COSINE),
         )
 
     app.client = client
@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize embeddings model
     logger.info("Creating embeddings model")
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-m3")
     logger.info("Embeddings model created")
 
     # Initialize vector store

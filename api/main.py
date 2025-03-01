@@ -23,7 +23,7 @@ from lifespan import lifespan
 from models import Chat
 from auth import decode_jwt
 from routers import auth, chats, documents, users, seed
-from agent_integration import generate_agentic_response, generate_streaming_response
+from agent_integration import generate_agentic_response
 
 
 app = FastAPI(lifespan=lifespan)
@@ -242,20 +242,10 @@ async def generate_response(chat_id: str):
         # Simulate streaming by breaking the response into chunks
         chunk_size = 20  # characters per chunk
         
+        logger.info(full_response)
+
         # Initial empty message to trigger the client
-        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': ''})}\n\n"
-        await asyncio.sleep(0.05)
-        
-        # Stream the response in chunks
-        for i in range(0, len(full_response), chunk_size):
-            chunk = full_response[i:i+chunk_size]
-            # Send accumulated text for backward compatibility
-            accumulated_text = full_response[:i+chunk_size]
-            yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': accumulated_text})}\n\n"
-            await asyncio.sleep(0.05)  # Small delay to simulate streaming
-        
-        # Signal completion
-        yield f"data: {json.dumps({'chat_id': chat_id, 'is_complete': True})}\n\n"
+        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': full_response})}\n\n"
     
     except Exception as e:
         logger.error(f"Error generating streaming response for chat {chat_id}: {e}")
@@ -340,6 +330,9 @@ async def update_chat(request: Request):
 async def change_model(response: Response, request: Request):
     body = await request.json()
     model = body.get("model")
+
+    logger.info("Model changed to: %s", model)
+
     if model is None:
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {"success": False, "message": "Model is required"}

@@ -102,7 +102,7 @@ def query_router(state: ChatState):
     if not latest_message:
         logger.warning("No human message found in state")
         state["current_action"] = ActionType.DIRECT
-        return ActionType.DIRECT
+        return state
     
     # Convert message to lowercase for pattern matching
     message_lower = latest_message.lower()
@@ -114,26 +114,26 @@ def query_router(state: ChatState):
         if re.search(pattern, message_lower):
             logger.info("Pattern matched: time tool")
             state["current_action"] = ActionType.TIME_TOOL
-            return ActionType.TIME_TOOL
+            return state
             
     for pattern in PATTERNS["date_patterns"]:
         if re.search(pattern, message_lower):
             logger.info("Pattern matched: time tool (date)")
             state["current_action"] = ActionType.TIME_TOOL
-            return ActionType.TIME_TOOL
+            return state
     
     for pattern in PATTERNS["day_patterns"]:
         if re.search(pattern, message_lower):
             logger.info("Pattern matched: time tool (day)")
             state["current_action"] = ActionType.TIME_TOOL
-            return ActionType.TIME_TOOL
+            return state
     
     # Check weather patterns
     for pattern in PATTERNS["weather_patterns"]:
         if re.search(pattern, message_lower):
             logger.info("Pattern matched: weather tool")
             state["current_action"] = ActionType.WEATHER_TOOL
-            return ActionType.WEATHER_TOOL
+            return state
     
     # Check calculator patterns
     for pattern in PATTERNS["calculator_patterns"]:
@@ -159,7 +159,7 @@ def query_router(state: ChatState):
         if re.search(pattern, message_lower):
             logger.info("Pattern matched: direct greeting")
             state["current_action"] = ActionType.DIRECT
-            return ActionType.DIRECT
+            return state
     
     # For ambiguous cases, use the LLM to classify
     llm = state["llm"]
@@ -196,7 +196,18 @@ def query_router(state: ChatState):
     
     try:
         # Use a low temperature for deterministic output
-        query_type = llm.invoke(classification_prompt).strip().lower()
+        response = llm.invoke(classification_prompt)
+        
+        # Handle different response types (AIMessage or string)
+        if hasattr(response, 'content'):
+            # This is likely an AIMessage object, extract the content
+            query_type = response.content
+        else:
+            # This is likely a string
+            query_type = str(response)
+            
+        # Clean up and standardize the response
+        query_type = query_type.strip().lower()
         
         # Clean up the result in case the LLM outputs extra text
         if ActionType.RAG in query_type:
@@ -216,7 +227,7 @@ def query_router(state: ChatState):
     # Set the action in state
     state["current_action"] = query_type
     
-    return query_type
+    return state
 
 def perform_rag_retrieval(state: ChatState):
     """
@@ -234,41 +245,36 @@ def perform_rag_retrieval(state: ChatState):
     if not latest_message:
         logger.warning("No human message found for RAG retrieval")
         state["rag_results"] = None
-        return "generate_response"
+        return state
     
     # Use the retriever to get relevant documents
     retriever = state["retriever"]
     if not retriever:
         logger.warning("No retriever available")
         state["rag_results"] = None
-        return "generate_response"
+        return state
     
     try:
         # Get relevant documents
         docs = retriever.get_relevant_documents(latest_message)
         
         if docs:
-            # Format the retrieved information with sources
-            retrieved_content = ""
-            for i, doc in enumerate(docs, 1):
-                source = doc.metadata.get('source', 'Unknown source')
-                retrieved_content += f"SOURCE {i}: {source}\n"
-                retrieved_content += f"CONTENT: {doc.page_content}\n\n"
-            
-            state["rag_results"] = retrieved_content
-            logger.info(f"Retrieved {len(docs)} documents")
+            # Format the docs into a string for the LLM
+            context = "\n\n".join([f"Document: {doc.page_content}" for doc in docs])
+            state["rag_results"] = context
+            logger.info(f"Retrieved {len(docs)} relevant documents")
         else:
-            state["rag_results"] = None
             logger.info("No relevant documents found")
+            state["rag_results"] = None
     except Exception as e:
-        logger.error(f"Error during RAG retrieval: {e}")
+        logger.error(f"Error retrieving documents: {e}")
         state["rag_results"] = None
     
-    return "generate_response"
+    return state
 
 def execute_time_tool(state: ChatState):
     """
-    Execute time-related tools based on the query.
+    Execute a time-related tool based on the query.
     """
     logger.info("Executing time tool")
     
@@ -280,53 +286,50 @@ def execute_time_tool(state: ChatState):
             break
     
     if not latest_message:
-        logger.warning("No human message found for tool execution")
-        return "generate_response"
+        logger.warning("No human message found for time tool")
+        tool_result = "I couldn't understand your time-related query."
+        state["tool_results"].append({
+            "tool": "time",
+            "result": tool_result
+        })
+        return state
     
-    # Determine the specific time tool to use
-    lower_message = latest_message.lower()
+    message_lower = latest_message.lower()
     
-    tool_results = []
-    
-    # Check for time patterns
-    time_requested = any(re.search(pattern, lower_message) for pattern in PATTERNS["time_patterns"])
-    date_requested = any(re.search(pattern, lower_message) for pattern in PATTERNS["date_patterns"])
-    day_requested = any(re.search(pattern, lower_message) for pattern in PATTERNS["day_patterns"])
-    
-    # Use tools from registry instead of directly defining them
-    if time_requested or not (date_requested or day_requested):
-        time_tool = get_tool_by_name("get_current_time")
-        if time_tool:
+    try:
+        # Determine which time tool to use
+        if any(re.search(pattern, message_lower) for pattern in PATTERNS["time_patterns"]):
+            time_tool = get_tool_by_name("get_current_time")
             result = time_tool()
-            tool_results.append({"tool": "get_current_time", "result": result})
-    
-    if date_requested:
-        date_tool = get_tool_by_name("get_current_date")
-        if date_tool:
+        elif any(re.search(pattern, message_lower) for pattern in PATTERNS["date_patterns"]):
+            date_tool = get_tool_by_name("get_current_date")
             result = date_tool()
-            tool_results.append({"tool": "get_current_date", "result": result})
-    
-    if day_requested:
-        day_tool = get_tool_by_name("get_day_of_week")
-        if day_tool:
+        elif any(re.search(pattern, message_lower) for pattern in PATTERNS["day_patterns"]):
+            day_tool = get_tool_by_name("get_day_of_week")
             result = day_tool()
-            tool_results.append({"tool": "get_day_of_week", "result": result})
-    
-    # If no specific tool matched, default to current time
-    if not tool_results:
-        time_tool = get_tool_by_name("get_current_time")
-        if time_tool:
+        else:
+            # Default to time if pattern is unclear
+            time_tool = get_tool_by_name("get_current_time")
             result = time_tool()
-            tool_results.append({"tool": "get_current_time", "result": result})
+        
+        state["tool_results"].append({
+            "tool": "time",
+            "result": result
+        })
+        
+        logger.info(f"Time tool result: {result}")
+    except Exception as e:
+        logger.error(f"Error executing time tool: {e}")
+        state["tool_results"].append({
+            "tool": "time",
+            "result": "I encountered an error trying to get the time information."
+        })
     
-    state["tool_results"] = tool_results
-    logger.info(f"Executed tools: {[tr['tool'] for tr in tool_results]}")
-    
-    return "generate_response"
+    return state
 
 def execute_weather_tool(state: ChatState):
     """
-    Execute weather-related tools based on the query.
+    Execute the weather tool based on the query.
     """
     logger.info("Executing weather tool")
     
@@ -339,58 +342,54 @@ def execute_weather_tool(state: ChatState):
     
     if not latest_message:
         logger.warning("No human message found for weather tool")
-        return "generate_response"
+        tool_result = "I couldn't understand your weather query."
+        state["tool_results"].append({
+            "tool": "weather",
+            "result": tool_result
+        })
+        return state
     
-    lower_message = latest_message.lower()
-    tool_results = []
+    message_lower = latest_message.lower()
+    location = "local"  # Default to local
     
-    # Try to extract location from the query
-    location = "local"  # Default to local weather
-    
+    # Try to extract location from query
     for pattern in PATTERNS["weather_patterns"]:
-        match = re.search(pattern, lower_message)
-        if match and hasattr(match, 'groupdict') and 'location' in match.groupdict():
-            extracted_location = match.group('location')
-            if extracted_location:
-                location = extracted_location
-                break
+        match = re.search(pattern, message_lower)
+        if match and 'location' in match.groupdict():
+            location = match.group('location')
+            break
     
-    # Extract location using simple pattern if not found with named group
-    if location == "local":
-        location_patterns = [
-            r'weather (in|for|at) (\w+)',
-            r'what\'s the weather (like )?(in|at|for) (\w+)',
-            r'how\'s the weather (in|at|for) (\w+)'
-        ]
+    try:
+        # Get the weather tool and execute it
+        weather_tool = get_tool_by_name("get_weather")
+        result = weather_tool(location=location)
         
-        for pattern in location_patterns:
-            match = re.search(pattern, lower_message)
-            if match and len(match.groups()) >= 2:
-                location = match.group(len(match.groups()))
-                break
+        state["tool_results"].append({
+            "tool": "weather",
+            "result": result
+        })
+        
+        logger.info(f"Weather tool result for {location}: {result}")
+    except Exception as e:
+        logger.error(f"Error executing weather tool: {e}")
+        state["tool_results"].append({
+            "tool": "weather",
+            "result": f"I encountered an error trying to get the weather information for {location}."
+        })
     
-    # Call the weather tool
-    weather_tool = get_tool_by_name("get_weather")
-    if weather_tool:
-        try:
-            result = weather_tool(location)
-            tool_results.append({"tool": "get_weather", "location": location, "result": result})
-            logger.info(f"Got weather for {location}")
-        except Exception as e:
-            logger.error(f"Error getting weather: {e}")
-            tool_results.append({"tool": "get_weather", "error": f"Could not get weather for {location}: {str(e)}"})
-    else:
-        logger.error("Weather tool not found")
-        tool_results.append({"tool": "get_weather", "error": "Weather tool not available"})
-    
-    state["tool_results"] = tool_results
-    return "generate_response"
+    return state
 
 def generate_response(state: ChatState):
     """
-    Generate the final response based on the agent's actions.
+    Generate a response based on the current state.
     """
     logger.info("Generating response")
+    
+    # Get the LLM from state
+    llm = state["llm"]
+    if not llm:
+        logger.error("No LLM available")
+        return state  # Early return if no LLM is available
     
     # Get the latest human message
     latest_message = None
@@ -400,89 +399,98 @@ def generate_response(state: ChatState):
             break
     
     if not latest_message:
-        logger.warning("No human message found for response generation")
-        return END
-    
-    llm = state["llm"]
-    current_action = state["current_action"]
-    
-    # Get conversation history for context
-    message_history = []
-    for message in state["messages"][-6:-1]:  # Get up to 5 previous messages, excluding the current one
-        if message.get("sender") == "human":
-            message_history.append(f"Human: {message.get('message')}")
-        else:
-            message_history.append(f"Assistant: {message.get('message')}")
-    
-    conversation_context = "\n".join(message_history)
-    if conversation_context:
-        conversation_context = f"Previous conversation:\n{conversation_context}\n\n"
-    
-    # Construct the prompt based on the current action
-    if current_action == ActionType.RAG and state.get("rag_results"):
-        # Use retrieved context in prompt
-        prompt = f"""
-        You are a helpful assistant. Answer based on the following retrieved documents and previous conversation.
-        
-        {conversation_context}
-        RETRIEVED INFORMATION:
-        {state["rag_results"]}
-        
-        USER QUERY:
-        {latest_message}
-        
-        Provide a comprehensive and accurate response based on the retrieved information.
-        Include citations to the sources when appropriate.
-        If the retrieved information doesn't fully answer the query, acknowledge that and provide
-        the best answer you can with what's available.
-        """
-    elif state.get("tool_results"):
-        # Use tool results in prompt
-        tool_outputs = "\n".join([f"{tr.get('tool', 'Unknown tool')}: {tr.get('result', 'No result')}" for tr in state["tool_results"]])
-        prompt = f"""
-        You are a helpful assistant. Based on the tool execution results and previous conversation:
-        
-        {conversation_context}
-        TOOL RESULTS:
-        {tool_outputs}
-        
-        USER QUERY:
-        {latest_message}
-        
-        Provide a natural and helpful response that incorporates the tool results.
-        """
+        logger.warning("No human message found")
+        response = "I'm sorry, I couldn't understand your message."
     else:
-        # Direct conversation
-        prompt = f"""
-        You are a helpful assistant. Respond to the following query based on previous conversation:
+        # Determine which knowledge to use for generating the response
+        current_action = state.get("current_action")
         
-        {conversation_context}
-        USER QUERY:
-        {latest_message}
+        if current_action == ActionType.RAG and state.get("rag_results"):
+            # Get the RAG results
+            context = state["rag_results"]
+            
+            prompt = f"""
+            Answer the user's question based on the following context:
+            
+            Context:
+            {context}
+            
+            User question: {latest_message}
+            
+            If the context doesn't contain relevant information to answer the question, 
+            please state that you don't have enough information to provide a complete answer,
+            but try to be helpful with what you know.
+            """
+            
+            try:
+                response = llm.invoke(prompt)
+                # Handle different response types
+                if hasattr(response, 'content'):
+                    response = response.content
+                else:
+                    response = str(response)
+            except Exception as e:
+                logger.error(f"Error generating RAG response: {e}")
+                response = "I'm sorry, I encountered an error while processing your query."
         
-        Provide a helpful, accurate, and concise response.
-        """
+        elif current_action in [ActionType.TIME_TOOL, ActionType.WEATHER_TOOL]:
+            # Use the latest tool result
+            tool_results = state.get("tool_results", [])
+            if tool_results:
+                latest_result = tool_results[-1].get("result", "I couldn't get the information you requested.")
+                response = latest_result
+            else:
+                response = "I couldn't process your request. Please try again."
+        
+        else:
+            # Direct conversation - use the chat history for context
+            context = ""
+            # Get up to 5 previous exchanges for context
+            message_pairs = []
+            human_msg = None
+            
+            for message in state["messages"]:
+                if message.get("sender") == "human":
+                    human_msg = message.get("message")
+                elif message.get("sender") == "ai" and human_msg:
+                    message_pairs.append((human_msg, message.get("message")))
+                    human_msg = None
+            
+            # Get most recent 5 pairs
+            context_pairs = message_pairs[-5:] if len(message_pairs) > 5 else message_pairs
+            
+            for human, ai in context_pairs:
+                context += f"Human: {human}\nAssistant: {ai}\n\n"
+            
+            prompt = f"""
+            You are a helpful AI assistant. Continue the conversation in a helpful and friendly manner.
+            
+            Previous conversation:
+            {context}
+            
+            Human: {latest_message}
+            Assistant:
+            """
+            
+            try:
+                response = llm.invoke(prompt)
+                # Handle different response types
+                if hasattr(response, 'content'):
+                    response = response.content
+                else:
+                    response = str(response)
+            except Exception as e:
+                logger.error(f"Error generating direct response: {e}")
+                response = "I'm sorry, I encountered an error while processing your message."
     
-    try:
-        # Generate the response
-        response = llm.invoke(prompt)
-        
-        # Add the response to the messages
-        state["messages"].append({
-            "sender": "assistant",
-            "message": response,
-        })
-        
-        logger.info("Response generated successfully")
-    except Exception as e:
-        logger.error(f"Error generating response: {e}")
-        # Add a fallback response
-        state["messages"].append({
-            "sender": "assistant",
-            "message": "I apologize, but I encountered an error processing your request. Please try again.",
-        })
+    # Add the response to messages
+    state["messages"].append({
+        "sender": "assistant",
+        "message": response
+    })
     
-    return END
+    logger.info("Response generated successfully")
+    return state
 
 def build_agent_graph():
     """
@@ -513,6 +521,7 @@ def build_agent_graph():
     workflow.add_edge("perform_rag_retrieval", "generate_response")
     workflow.add_edge("execute_time_tool", "generate_response")
     workflow.add_edge("execute_weather_tool", "generate_response")
+    workflow.add_edge("generate_response", END)
     
     # Set the entry point
     workflow.set_entry_point("query_router")

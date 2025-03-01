@@ -19,31 +19,36 @@ TOOL_REGISTRY: Dict[str, Callable] = {}
 
 def register_tool(tool_func: Callable) -> Callable:
     """Register a tool function in the registry."""
-    TOOL_REGISTRY[tool_func.__name__] = tool_func
+    # Check if the tool_func is a StructuredTool or similar with a 'name' attribute
+    if hasattr(tool_func, 'name'):
+        TOOL_REGISTRY[tool_func.name] = tool_func
+    else:
+        # Fall back to __name__ for regular functions
+        TOOL_REGISTRY[tool_func.__name__] = tool_func
     return tool_func
 
 # Time and date tools
-@register_tool
 @tool
+@register_tool
 def get_current_time():
     """Get the current date and time."""
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-@register_tool
 @tool
+@register_tool
 def get_current_date():
     """Get the current date."""
     return datetime.now().strftime("%Y-%m-%d")
 
-@register_tool
 @tool
+@register_tool
 def get_day_of_week():
     """Get the current day of the week."""
     return datetime.now().strftime("%A")
 
 # Weather tool - uses dummy data for demonstration
-@register_tool
 @tool
+@register_tool
 def get_weather(location: str = "local"):
     """Get the current weather for a specified location. Defaults to local weather if no location provided."""
     # This is a dummy implementation for demonstration purposes
@@ -91,16 +96,16 @@ def get_weather(location: str = "local"):
            f"Humidity: {weather['humidity']}%, Wind: {weather['wind_speed']} mph"
 
 # Calendar tools - placeholders for future implementation
-@register_tool
 @tool
+@register_tool
 def list_upcoming_events(days: int = 7):
     """List upcoming events in the calendar for the next n days."""
     # Placeholder implementation
     return f"Would show events for the next {days} days (functionality not implemented yet)"
 
 # Calculator tool
-@register_tool
 @tool
+@register_tool
 def calculate(expression: str):
     """Evaluate a mathematical expression."""
     try:

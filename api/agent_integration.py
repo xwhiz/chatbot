@@ -104,8 +104,6 @@ async def generate_agentic_response(app, chat_id: str):
         # Get custom prompt if available
         custom_prompt = user.get("prompt", "")
         
-        # Get retriever for the user - use app.get_retriever_for_user directly
-        # to avoid circular imports
         try:
             user_info = await app.database["users"].find_one(
                 {"email": user_email}, {"accessible_docs": 1}
@@ -139,7 +137,6 @@ async def generate_agentic_response(app, chat_id: str):
             logger.error(f"Error getting retriever for user {user_email}: {e}")
             retriever = None
         
-        # Set up the initial state for the agent
         state = ChatState(
             messages=chat["messages"],
             user_email=user_email,
@@ -149,7 +146,8 @@ async def generate_agentic_response(app, chat_id: str):
             current_action=None,
             llm=app.llm,
             retriever=retriever,
-            db=app.database
+            db=app.database,
+            custom_prompt=custom_prompt,
         )
         
         # Execute the agent graph

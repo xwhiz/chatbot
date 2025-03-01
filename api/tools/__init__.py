@@ -35,6 +35,13 @@ def get_current_time():
 
 @tool
 @register_tool
+def get_day_date_time() -> str:
+    """Get the current day, date, and time."""
+    return datetime.now().strftime("%A, %B %d, %Y %I:%M %p")
+
+
+@tool
+@register_tool
 def get_current_date():
     """Get the current date."""
     return datetime.now().strftime("%Y-%m-%d")

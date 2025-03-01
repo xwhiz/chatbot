@@ -9,9 +9,10 @@ from langgraph.graph import StateGraph, END
 from langchain_core.vectorstores import VectorStoreRetriever
 import logging
 import re
+import json
 
 # Import tools from registry instead of defining them here
-from tools import get_tool_by_name, get_tool_descriptions
+from tools import get_day_date_time, get_tool_by_name
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -28,15 +29,33 @@ class ChatState(TypedDict):
     llm: Any
     retriever: Optional[Any]
     db: Optional[Any]
+    custom_prompt: Optional[str]
 
-# Define actions
 class ActionType:
     RAG = "rag"
     TIME_TOOL = "time_tool"
     DIRECT = "direct"
 
 
-# Agent nodes
+def _get_context_from_history(messages: List[Dict], max_pairs: int = 5) -> str:
+    message_pairs = []
+    human_msg = None
+    
+    for message in messages:
+        if message.get("sender") == "human":
+            human_msg = message.get("message")
+        elif message.get("sender") == "ai" and human_msg:
+            message_pairs.append((human_msg, message.get("message")))
+            human_msg = None
+    
+    context = ""
+    context_pairs = message_pairs[-max_pairs:] if len(message_pairs) > max_pairs else message_pairs
+    for human, ai in context_pairs:
+        context += f"Human: {human}\nAssistant: {ai}\n\n"
+    
+    return context.strip()
+
+
 def query_router(state: ChatState):
     """
     Determine if the query should be handled by RAG, a tool, or direct conversation.
@@ -69,32 +88,55 @@ def query_router(state: ChatState):
     llm = state["llm"]
     
     classification_prompt = f"""
-    Determine the best way to process the user's query by selecting the most appropriate tool.
+    Determine the best way to process the user's query by assigning a confidence percentage to each available tool.
 
     Query: {latest_message}
 
-    Available tools:
-    - "time_tool": Use this for any query asking about the current date, time, or anything relative to the present (e.g., "What’s today's date?", "What day is it?", "Is it Monday today?").
-    - "rag": Use this **only** when the query requires external knowledge retrieval, such as historical facts, research topics, or any information the model is not certain about. **Do NOT use RAG if the query is about the current time or date.**
-    - "direct": Use this when the model can confidently answer without using tools or RAG.
+    Context (if available):
+    { _get_context_from_history(state['messages']) }
 
-    Guidelines:
-    - **If the query is about the current date or time, always use "time_tool".**
-    - **Only use "rag" when factual information beyond the model's knowledge is needed.**
-    - **If no tools are required, use "direct".**
-    - Return ONLY the classification string: "time_tool", "rag", or "direct".
+    RAG results from history (if available):
+    {state.get('rag_results', 'No RAG results available')}
+
+    Available tools:
+    - "time_tool": Use this when the query requires the **current date, time, or any reasoning based on the present moment** (e.g., "What day is it?", "How many days until an event?").  
+    - "rag": Use this when the **query asks for factual knowledge that is NOT explicitly known to the model or current context** (e.g., "Who is [someone]?", "What are the details of [X]?").  
+    - "direct": Use this when the model **can confidently answer from its built-in knowledge OR the context already contains the answer** without requiring external retrieval.
+
+    ### **Output Format (STRICTLY FOLLOW THIS)**
+    - **Return ONLY a JSON object and NOTHING ELSE.**
+    - **Do NOT include explanations, text, or extra characters.**
+    - **Ensure the output is valid JSON with no surrounding text.**
+    - **If you generate anything other than the JSON, the response is INVALID.**
+    - **Do NOT use triple backticks or markdown formatting.**
+    - DON'T GIVE ME RESPONSE IN FUCKING MARKDOWN FORMAT. GIVE IT TO ME JUST PLAINTEXT AND VALID JSON.
+
+    #### **Return JSON in this EXACT format:**
+    {{
+        "time_tool": <confidence_score>,
+        "rag": <confidence_score>,
+        "direct": <confidence_score>
+    }}
     """
 
     
     try:
         response = llm.invoke(classification_prompt)
         if hasattr(response, 'content'):
-            query_type = response.content
+            response = response.content
         else:
-            query_type = str(response)
-            
-        query_type = query_type.strip().lower()
+            response = str(response)
         
+        logger.info(f"Classification response: {response}")
+        rating = json.loads(response)
+        logger.info(f"Classification rating: {rating}")
+
+        
+        query_type = "time_tool"
+        for key, value in rating.items():
+            if rating[query_type] < value:
+                query_type = key
+
         if ActionType.RAG in query_type:
             query_type = ActionType.RAG
         elif ActionType.TIME_TOOL in query_type:
@@ -175,29 +217,12 @@ def execute_time_tool(state: ChatState):
         })
         return state
     
-    message_lower = latest_message.lower()
-    
     try:
-        # Determine which time tool to use
-        if any(re.search(pattern, message_lower) for pattern in PATTERNS["time_patterns"]):
-            time_tool = get_tool_by_name("get_current_time")
-            result = time_tool()
-        elif any(re.search(pattern, message_lower) for pattern in PATTERNS["date_patterns"]):
-            date_tool = get_tool_by_name("get_current_date")
-            result = date_tool()
-        elif any(re.search(pattern, message_lower) for pattern in PATTERNS["day_patterns"]):
-            day_tool = get_tool_by_name("get_day_of_week")
-            result = day_tool()
-        else:
-            # Default to time if pattern is unclear
-            time_tool = get_tool_by_name("get_current_time")
-            result = time_tool()
-        
+        result = get_tool_by_name("get_day_date_time")()
         state["tool_results"].append({
             "tool": "time",
             "result": result
         })
-        
         logger.info(f"Time tool result: {result}")
     except Exception as e:
         logger.error(f"Error executing time tool: {e}")
@@ -230,78 +255,105 @@ def generate_response(state: ChatState):
     if not latest_message:
         logger.warning("No human message found")
         response = "I'm sorry, I couldn't understand your message."
+        state["messages"].append({
+            "sender": "assistant",
+            "message": response
+        })
+        return state
+
+    context = _get_context_from_history(state['messages'])
+    
+
+    # Determine which knowledge to use for generating the response
+    current_action = state.get("current_action")
+    
+    if current_action == ActionType.RAG and state.get("rag_results"):
+        # Get the RAG results
+        context = state["rag_results"]
+        
+        prompt = f"""
+        Answer the user's question based on the following context:
+        
+        Context:
+        {context}
+        
+        User question: {latest_message}
+        
+        If the context doesn't contain relevant information to answer the question, 
+        please state that you don't have enough information to provide a complete answer,
+        but try to be helpful with what you know.
+        """
+        
+        try:
+            response = llm.invoke(prompt)
+            # Handle different response types
+            if hasattr(response, 'content'):
+                response = response.content
+            else:
+                response = str(response)
+        except Exception as e:
+            logger.error(f"Error generating RAG response: {e}")
+            response = "I'm sorry, I encountered an error while processing your query."
+    
+    elif current_action in [ActionType.TIME_TOOL]:
+        tool_results = state.get("tool_results", [])
+        latest_result = tool_results[-1].get("result", "I couldn't get the information you requested.")
+
+        prompt = f"""
+        Your role: ###{state.get("custom_prompt")}###
+
+        You are an assistant designed for question-answering tasks. 
+        - Use the provided pieces of retrieved context to answer questions as accurately as possible. 
+        - When the context does not directly provide an answer, or when the question is unrelated to the context, 
+        - use your general knowledge to respond appropriately. 
+        - Avoid referencing the retrieved context when it is irrelevant to the question.
+        
+        <context>
+        ###Previous Chat Context: %s###
+        {context}
+        </context>
+
+        <tool-result>
+        {latest_result}
+        </tool-result>
+
+        Answer the following question:
+        {latest_message}
+        """
+
+        try:
+            response = llm.invoke(prompt)
+            if hasattr(response, 'content'):
+                response = response.content
+            else:
+                response = str(response)
+        except Exception as e:
+            logger.error(f"Error generating direct response: {e}")
+            response = "I'm sorry, I encountered an error while processing your message."
+
     else:
-        # Determine which knowledge to use for generating the response
-        current_action = state.get("current_action")
         
-        if current_action == ActionType.RAG and state.get("rag_results"):
-            # Get the RAG results
-            context = state["rag_results"]
-            
-            prompt = f"""
-            Answer the user's question based on the following context:
-            
-            Context:
-            {context}
-            
-            User question: {latest_message}
-            
-            If the context doesn't contain relevant information to answer the question, 
-            please state that you don't have enough information to provide a complete answer,
-            but try to be helpful with what you know.
-            """
-            
-            try:
-                response = llm.invoke(prompt)
-                # Handle different response types
-                if hasattr(response, 'content'):
-                    response = response.content
-                else:
-                    response = str(response)
-            except Exception as e:
-                logger.error(f"Error generating RAG response: {e}")
-                response = "I'm sorry, I encountered an error while processing your query."
         
-        else:
-            # Direct conversation - use the chat history for context
-            context = ""
-            # Get up to 5 previous exchanges for context
-            message_pairs = []
-            human_msg = None
-            
-            for message in state["messages"]:
-                if message.get("sender") == "human":
-                    human_msg = message.get("message")
-                elif message.get("sender") == "ai" and human_msg:
-                    message_pairs.append((human_msg, message.get("message")))
-                    human_msg = None
-            
-            # Get most recent 5 pairs
-            context_pairs = message_pairs[-5:] if len(message_pairs) > 5 else message_pairs
-            
-            for human, ai in context_pairs:
-                context += f"Human: {human}\nAssistant: {ai}\n\n"
-            
-            prompt = f"""
-            You are a helpful AI assistant. Continue the conversation in a helpful and friendly manner.
-            
-            Previous conversation:
-            {context}
-            
-            Human: {latest_message}
-            Assistant:
-            """
-            
-            try:
-                response = llm.invoke(prompt)
-                # Handle different response types
-                if hasattr(response, 'content'):
-                    response = response.content
-                else:
-                    response = str(response)
-            except Exception as e:
-                logger.error(f"Error generating direct response: {e}")
-                response = "I'm sorry, I encountered an error while processing your message."
+        prompt = f"""
+        You are a helpful AI assistant. Continue the conversation in a helpful and friendly manner.
+        
+        Previous conversation:
+        {context}
+        
+        Human: {latest_message}
+        Assistant:
+        """
+        
+        try:
+            response = llm.invoke(prompt)
+            # Handle different response types
+            if hasattr(response, 'content'):
+                response = response.content
+            else:
+                response = str(response)
+        except Exception as e:
+            logger.error(f"Error generating direct response: {e}")
+            response = "I'm sorry, I encountered an error while processing your message."
     
     # Add the response to messages
     state["messages"].append({

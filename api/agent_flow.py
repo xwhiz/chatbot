@@ -68,34 +68,6 @@ def query_router(state: ChatState):
     # For ambiguous cases, use the LLM to classify
     llm = state["llm"]
     
-    # Get tool descriptions for the prompt
-    tool_descriptions = "\n".join([
-        f"- {tool['name']}: {tool['description']}" 
-        for tool in get_tool_descriptions()
-    ])
-    
-    # Provide hints to the LLM based on pattern matching
-    hints = ""
-    # if rag_indicators_found:
-    #     hints = "Hint: This query contains indicators that it might be seeking information from a knowledge base."
-    
-    # classification_prompt = f"""
-    # Determine how to process this user query. Choose exactly ONE option that best fits:
-    
-    # Query: {latest_message}
-    
-    # Available tools:
-    # {tool_descriptions}
-    
-    # {hints}
-    
-    # Options:
-    # - "{ActionType.RAG}": If the query is requesting information that should be retrieved from a knowledge base or documents
-    # - "{ActionType.TIME_TOOL}": If the query is asking about current time, date, or day of week
-    # - "{ActionType.DIRECT}": If the query is general conversation that doesn't need tools or retrieval
-    
-    # Output format: Return ONLY the classification string, nothing else.
-    # """
     classification_prompt = f"""
     Determine the best way to process the user's query by selecting the most appropriate tool.
 

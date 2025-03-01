@@ -20,6 +20,7 @@ from lifespan import lifespan
 from models import Chat
 from auth import decode_jwt
 from routers import auth, chats, documents, users, seed
+from agent_integration import generate_agentic_response, generate_streaming_response, get_retriever_for_user
 
 
 app = FastAPI(lifespan=lifespan)
@@ -110,11 +111,7 @@ async def add_message(
 
         result = await app.database["chats"].insert_one(chat.model_dump())
 
-        if not result:
-            response.status_code = status.HTTP_400_BAD_REQUEST
-            return {"success": False, "message": "Could not create chat"}
-
-        if not result.acknowledged:
+        if not result or not result.acknowledged:
             response.status_code = status.HTTP_400_BAD_REQUEST
             return {"success": False, "message": "Could not create chat"}
 
@@ -143,11 +140,7 @@ async def add_message(
         {"_id": ObjectId(chat_id)}, {"$set": chat}
     )
 
-    if not result:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"success": False, "message": "Could not update chat"}
-
-    if not result.acknowledged:
+    if not result or not result.acknowledged:
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {"success": False, "message": "Could not update chat"}
 
@@ -198,7 +191,7 @@ def get_context_string(length: int, chat: dict) -> str:
         if message['sender'] == 'human':
             pair = [f"Human: `{message['message']}`"]
         else:
-            pair.append(f"Assistant: `{message['message']}")
+            pair.append(f"Assistant: `{message['message']}`")
 
         if len(pair) == 2:
             pairs.append(pair)
@@ -216,100 +209,21 @@ def get_context_string(length: int, chat: dict) -> str:
 
 
 async def generate_response(chat_id: str):
-    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
-    if not chat:
-        return
-    
-
-    user_email = chat["user_email"]
-    user = await app.database["users"].find_one({"email": user_email})
-    if not user:
-        return
-
-    prompt = ""
-    if "prompt" in user:
-        prompt = user["prompt"]
-
-    context_length = 5
-    context_string = get_context_string(context_length, chat)
-    retriever = await get_retriever_for_user(chat["user_email"])
-    qa_chain = initialize_qa_chain(app.llm, retriever, prompt, context_string)
-
-    last_human_message = None
-    for message in reversed(chat["messages"]):
-        if message["sender"] == "human":
-            last_human_message = message
-            break
-
-    if not last_human_message:
-        return
+    """
+    Legacy function wrapper that calls the new agentic response generator.
+    """
+    return await generate_agentic_response(app, chat_id)
 
 
-    is_instructions = False
-    if (
-        "[NOTE]" in last_human_message["message"].upper()
-        or "[TAKE NOTE]" in last_human_message["message"].upper()
-        or "[TAKENOTE]" in last_human_message["message"].upper()
-    ):
-        is_instructions = True
-
-        user["prompt"] += "\n" + last_human_message["message"].lower().replace(
-            "[note]", ""
-        ).replace("[take note]", "").replace("[takenote]", "")
-
-        result = await app.database["users"].update_one(
-            {"_id": ObjectId(user["_id"])}, {"$set": user}
-        )
-
-        if not result.acknowledged:
-            yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': 'Unable to save your instructions. Please try again.'})}\n\n"
-            return
-        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': 'Provided instructions has been saved.'})}\n\n"
-        return
-
-    if is_instructions:
-        return
-
-    print("Generating response for:", last_human_message["message"])
-    print(retriever.invoke(last_human_message["message"]))
-
-    try:
-        stream = qa_chain.stream(last_human_message["message"])
-    except Exception as e:
-        print("Error in generating response:", e)
-
-        print("Recreating Qdrant client")
-        app.client = QdrantClient(path=config("VECTOR_DOC_DB_PATH"))
-        stream = qa_chain.stream(last_human_message["message"])
-
-    for chunk in stream:
-        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk}).strip()}\n\n"
-
-
-@app.get("/generate-response")
-async def bot_response(chat_id: str, token: str):
-    payload = decode_jwt(token)
-
-    if not payload:
-        return Response(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content=json.dumps({"success": False, "message": "Unauthorized"}),
-        )
-
-    if chat_id is None:
-        return Response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content=json.dumps({"success": False, "message": "Chat id is required"}),
-        )
-
-    chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
-    if not chat:
-        return Response(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content=json.dumps({"success": False, "message": "Chat not found"}),
-        )
-
-    return StreamingResponse(generate_response(chat_id), media_type="text/event-stream")
+@app.get("/generate-response/{chat_id}")
+async def get_response(chat_id: str):
+    """
+    Generate a response for a chat using the LangGraph agent.
+    """
+    return StreamingResponse(
+        generate_streaming_response(app, chat_id),
+        media_type="text/event-stream",
+    )
 
 
 @app.post("/update-chat")
@@ -369,6 +283,8 @@ async def change_model(response: Response, request: Request):
 
 # A health endpoint
 @app.get("/health")
-async def health(response: Response):
-    response.status_code = status.HTTP_200_OK
+async def health_check():
+    """
+    Health check endpoint.
+    """
     return {"status": "ok"}

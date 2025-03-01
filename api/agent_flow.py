@@ -500,6 +500,7 @@ def build_agent_graph():
     # Add conditional edges from router
     workflow.add_conditional_edges(
         "query_router",
+        lambda state: state["current_action"],
         {
             ActionType.RAG: "perform_rag_retrieval",
             ActionType.TIME_TOOL: "execute_time_tool",

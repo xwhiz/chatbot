@@ -4,7 +4,9 @@ This allows for a seamless transition from the current implementation to the age
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+import json
+import asyncio
+from typing import List, Dict, Any, Optional, AsyncGenerator
 from bson import ObjectId
 
 from agent_flow import build_agent_graph, ChatState
@@ -106,6 +108,39 @@ async def generate_agentic_response(app, chat_id: str):
             logger.error(f"User not found: {user_email}")
             return None
 
+        # Check for custom instructions
+        if (
+            len(chat["messages"]) > 0 and 
+            chat["messages"][-1]["sender"] == "human" and
+            (
+                "[NOTE]" in chat["messages"][-1]["message"].upper() or
+                "[TAKE NOTE]" in chat["messages"][-1]["message"].upper() or
+                "[TAKENOTE]" in chat["messages"][-1]["message"].upper()
+            )
+        ):
+            # Handle custom instructions
+            instruction = chat["messages"][-1]["message"].lower()
+            instruction = (
+                instruction.replace("[note]", "")
+                .replace("[take note]", "")
+                .replace("[takenote]", "")
+                .strip()
+            )
+            
+            # Update user prompt
+            current_prompt = user.get("prompt", "")
+            new_prompt = f"{current_prompt}\n{instruction}" if current_prompt else instruction
+            
+            result = await app.database["users"].update_one(
+                {"_id": ObjectId(user["_id"])}, {"$set": {"prompt": new_prompt}}
+            )
+            
+            if not result or not result.acknowledged:
+                logger.error(f"Failed to update user prompt for {user_email}")
+                return "Unable to save your instructions. Please try again."
+            
+            return "Provided instructions have been saved."
+
         # Get custom prompt if available
         custom_prompt = user.get("prompt", "")
         
@@ -153,22 +188,38 @@ async def generate_agentic_response(app, chat_id: str):
         logger.error(f"Error generating agentic response for chat {chat_id}: {e}")
         return "I apologize, but I encountered an error processing your request. Please try again."
 
-async def generate_streaming_response(app, chat_id: str):
+async def generate_streaming_response(app, chat_id: str) -> AsyncGenerator[str, None]:
     """
     Generate a streaming response using the LangGraph agent.
-    For use with streaming endpoints.
+    This simulates streaming by breaking the response into chunks and using SSE formatting.
     """
     try:
-        # Implementation for streaming will be similar to generate_agentic_response
-        # but with yielding partial results
-        # This is a placeholder for future implementation
+        # Get the full response first
+        full_response = await generate_agentic_response(app, chat_id)
         
-        # For now, we'll just call the non-streaming version
-        response = await generate_agentic_response(app, chat_id)
+        if not full_response:
+            yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': 'No response generated.'})}\n\n"
+            return
         
-        # In a real streaming implementation, we would yield chunks of the response
-        yield response
+        # Simulate streaming by breaking the response into chunks
+        # This is a placeholder until true streaming is implemented in LangGraph
+        chunk_size = 20  # characters per chunk
+        
+        # Initial empty message to trigger the client
+        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': ''})}\n\n"
+        await asyncio.sleep(0.05)
+        
+        # Stream the response in chunks
+        for i in range(0, len(full_response), chunk_size):
+            chunk = full_response[i:i+chunk_size]
+            yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk})}\n\n"
+            await asyncio.sleep(0.05)  # Small delay to simulate streaming
+        
+        # Signal completion
+        yield f"data: {json.dumps({'chat_id': chat_id, 'is_complete': True})}\n\n"
     
     except Exception as e:
         logger.error(f"Error generating streaming response for chat {chat_id}: {e}")
-        yield "I apologize, but I encountered an error processing your request. Please try again." 
+        error_message = "I apologize, but I encountered an error processing your request. Please try again."
+        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': error_message})}\n\n"
+        yield f"data: {json.dumps({'chat_id': chat_id, 'is_complete': True})}\n\n" 

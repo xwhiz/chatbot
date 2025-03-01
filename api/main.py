@@ -5,15 +5,16 @@ from fastapi import (
     Response,
     status,
     Request,
+    Depends,
+    HTTPException,
+    Header,
 )
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from bson import ObjectId
 from decouple import config
-from qdrant_client import QdrantClient
-from qdrant_client.http import models as rest
-from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_ollama import ChatOllama
+from typing import Optional
 
 from model_inference import initialize_qa_chain
 from lifespan import lifespan
@@ -44,7 +45,6 @@ async def verify_token(request, call_next):
         "/seed/create-admin",
         "/docs",
         "/openapi.json",
-        "/generate-response",
         "/health",
     ]
     if request.url.path in allowed_paths:
@@ -74,6 +74,45 @@ async def verify_token(request, call_next):
     request.state.payload = payload
 
     return await call_next(request)
+
+
+async def verify_user_access(chat_id: str, request: Request):
+    """
+    Verify that the user has access to the specified chat.
+    """
+    try:
+        # Get the chat
+        chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
+        if not chat:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Chat not found",
+            )
+        
+        # Get user from token payload
+        payload = request.state.payload
+        user_email = payload.get("email")
+        user_role = payload.get("role")
+        
+        # Admin can access all chats
+        if user_role == "admin":
+            return chat
+        
+        # Regular users can only access their own chats
+        if chat["user_email"] != user_email:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have access to this chat",
+            )
+        
+        return chat
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error verifying access: {str(e)}",
+        )
 
 
 @app.get("/")
@@ -148,42 +187,7 @@ async def add_message(
     return {"success": True, "message": "Chat updated successfully", "chat_id": chat_id}
 
 
-async def get_retriever_for_user(user_email: str) -> VectorStoreRetriever:
-    user = await app.database["users"].find_one(
-        {"email": user_email}, {"accessible_docs": 1}
-    )
-
-    accessible_docs = user.get("accessible_docs", [])
-
-    if "all" in accessible_docs:
-        return app.vector_store.as_retriever(
-            search_type="similarity",
-            search_kwargs={
-                "k": 5,
-                "score_threshold": 0.2,
-            },
-        )
-
-    print("Accessible docs", accessible_docs)
-    return app.vector_store.as_retriever(
-        search_type="similarity",
-        search_kwargs={
-            "k": 5,
-            "score_threshold": 0.2,
-            "filter": rest.Filter(
-                must=[
-                    rest.FieldCondition(
-                        key="metadata.document_id",  # Ensure the path to metadata is correct
-                        match=rest.MatchAny(
-                            any=accessible_docs,
-                        ),
-                    )
-                ]
-            ),
-        },
-    )
-
-
+# Legacy function kept for reference
 def get_context_string(length: int, chat: dict) -> str:
     pairs = []
     pair = []
@@ -216,10 +220,41 @@ async def generate_response(chat_id: str):
 
 
 @app.get("/generate-response/{chat_id}")
-async def get_response(chat_id: str):
+async def get_response(
+    chat_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(None)
+):
     """
     Generate a response for a chat using the LangGraph agent.
     """
+    # Verify authorization if not through middleware
+    if not hasattr(request.state, "payload"):
+        if not authorization:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authorization header missing",
+            )
+        
+        try:
+            token = authorization.split(" ")[1]
+            payload = decode_jwt(token)
+            if not payload:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token",
+                )
+            request.state.payload = payload
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authorization header",
+            )
+    
+    # Verify user has access to the chat
+    await verify_user_access(chat_id, request)
+    
+    # Generate and stream the response
     return StreamingResponse(
         generate_streaming_response(app, chat_id),
         media_type="text/event-stream",
@@ -239,6 +274,9 @@ async def update_chat(request: Request):
                 {"success": False, "message": "Chat id and full message are required"}
             ),
         )
+
+    # Verify user has access to the chat
+    await verify_user_access(chat_id, request)
 
     message = {
         "sender": "ai",
@@ -280,6 +318,7 @@ async def change_model(response: Response, request: Request):
     app.llm = ChatOllama(model=model)
     response.status_code = status.HTTP_200_OK
     return {"success": True, "message": f"Changed LLM model to {model}"}
+
 
 # A health endpoint
 @app.get("/health")

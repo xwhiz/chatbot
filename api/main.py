@@ -16,6 +16,7 @@ from bson import ObjectId
 from decouple import config
 from langchain_ollama import ChatOllama
 from typing import Optional
+import asyncio
 
 from model_inference import initialize_qa_chain
 from lifespan import lifespan
@@ -228,8 +229,39 @@ def get_context_string(length: int, chat: dict) -> str:
 async def generate_response(chat_id: str):
     """
     Legacy function wrapper that calls the new agentic response generator.
+    This returns an async generator for streaming responses.
     """
-    return await generate_agentic_response(app, chat_id)
+    try:
+        # Get the full response from the agentic generator
+        full_response = await generate_agentic_response(app, chat_id)
+        
+        if not full_response:
+            yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': 'No response generated.'})}\n\n"
+            return
+        
+        # Simulate streaming by breaking the response into chunks
+        chunk_size = 20  # characters per chunk
+        
+        # Initial empty message to trigger the client
+        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': ''})}\n\n"
+        await asyncio.sleep(0.05)
+        
+        # Stream the response in chunks
+        for i in range(0, len(full_response), chunk_size):
+            chunk = full_response[i:i+chunk_size]
+            # Send accumulated text for backward compatibility
+            accumulated_text = full_response[:i+chunk_size]
+            yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': accumulated_text})}\n\n"
+            await asyncio.sleep(0.05)  # Small delay to simulate streaming
+        
+        # Signal completion
+        yield f"data: {json.dumps({'chat_id': chat_id, 'is_complete': True})}\n\n"
+    
+    except Exception as e:
+        logger.error(f"Error generating streaming response for chat {chat_id}: {e}")
+        error_message = "I apologize, but I encountered an error processing your request. Please try again."
+        yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': error_message})}\n\n"
+        yield f"data: {json.dumps({'chat_id': chat_id, 'is_complete': True})}\n\n"
 
 
 # Replace these endpoints with the original version

@@ -1,4 +1,5 @@
 import json
+import logging
 from fastapi import (
     Body,
     FastAPI,
@@ -36,6 +37,10 @@ app.add_middleware(
 )
 
 
+# Configure logger
+logger = logging.getLogger(__name__)
+
+
 @app.middleware("http")
 async def verify_token(request, call_next):
     allowed_paths = [
@@ -47,21 +52,28 @@ async def verify_token(request, call_next):
         "/openapi.json",
         "/health",
     ]
-    if request.url.path in allowed_paths:
-        response = await call_next(request)
-        return response
+    
+    # Check if the path matches any allowed paths (even with additional parameters)
+    for allowed_path in allowed_paths:
+        if request.url.path.startswith(allowed_path):
+            response = await call_next(request)
+            return response
 
     # if request is options, we don't need to verify the token
     if request.method == "OPTIONS":
         response = await call_next(request)
         return response
 
-    authorization = request.headers.get("Authorization")
-
-    if not authorization:
-        return Response(status_code=status.HTTP_401_UNAUTHORIZED)
-
-    token = authorization.split(" ")[1]
+    # Look for token in query params first (for backward compatibility)
+    token = None
+    if "token" in request.query_params:
+        token = request.query_params["token"]
+    else:
+        # If not in query params, check Authorization header
+        authorization = request.headers.get("Authorization")
+        if not authorization:
+            return Response(status_code=status.HTTP_401_UNAUTHORIZED)
+        token = authorization.split(" ")[1]
 
     if token == "undefined":
         return Response(status_code=status.HTTP_401_UNAUTHORIZED)
@@ -220,87 +232,31 @@ async def generate_response(chat_id: str):
     return await generate_agentic_response(app, chat_id)
 
 
-# Old style endpoint (for backward compatibility)
-@app.get("/generate-response-legacy/{chat_id}")
-async def get_legacy_response(chat_id: str):
-    """
-    Legacy endpoint for backward compatibility with old frontend.
-    No authentication required.
-    """
-    return StreamingResponse(
-        generate_streaming_response(app, chat_id),
-        media_type="text/event-stream",
-    )
+# Replace these endpoints with the original version
+@app.get("/generate-response")
+async def bot_response(chat_id: str, token: str):
+    payload = decode_jwt(token)
 
+    if not payload:
+        return Response(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content=json.dumps({"success": False, "message": "Unauthorized"}),
+        )
 
-@app.get("/generate-response/{chat_id}")
-async def get_response(
-    chat_id: str,
-    request: Request,
-    authorization: Optional[str] = Header(None),
-    token: Optional[str] = None
-):
-    """
-    Generate a response for a chat using the LangGraph agent.
-    Supports both header-based authentication and query parameter token for backwards compatibility.
-    """
-    # Check for token in query params first (for backward compatibility)
-    if token and not authorization:
-        # Use token from query parameter
-        try:
-            payload = decode_jwt(token)
-            if not payload:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token in query parameter",
-                )
-            request.state.payload = payload
-        except Exception as e:
-            logger.error(f"Error decoding token from query parameter: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authorization token in query parameter",
-            )
-    # Otherwise verify authorization in header if not through middleware
-    elif not hasattr(request.state, "payload"):
-        if not authorization:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authorization header missing",
-            )
-        
-        try:
-            token = authorization.split(" ")[1]
-            payload = decode_jwt(token)
-            if not payload:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token",
-                )
-            request.state.payload = payload
-        except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authorization header",
-            )
-    
-    # Skip user access verification for now to maintain backward compatibility
-    # This is less secure but maintains compatibility with the old frontend
-    # In the future, consider adding proper access control back 
-    
-    # Instead of strict verification, just get the chat directly
+    if chat_id is None:
+        return Response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content=json.dumps({"success": False, "message": "Chat id is required"}),
+        )
+
     chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
     if not chat:
-        raise HTTPException(
+        return Response(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Chat not found",
+            content=json.dumps({"success": False, "message": "Chat not found"}),
         )
-    
-    # Generate and stream the response
-    return StreamingResponse(
-        generate_streaming_response(app, chat_id),
-        media_type="text/event-stream",
-    )
+
+    return StreamingResponse(generate_response(chat_id), media_type="text/event-stream")
 
 
 @app.post("/update-chat")

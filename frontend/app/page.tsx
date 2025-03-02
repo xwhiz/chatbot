@@ -12,6 +12,7 @@ import { useUserChatsStore } from "@/stores/userChatsStore";
 import { toast } from "react-toastify";
 import { useActiveChat } from "@/stores/activeChat";
 import { useIsGeneratingStore } from "@/stores/useIsGeneratingStore";
+import { Brain } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function Home() {
     message: string;
   }>({ isGenerating: false, message: "" });
   const { setIsGenerating } = useIsGeneratingStore();
+  const [shouldUseKnowledgeBase, setShouldUseKnowledgeBase] = useState(false);
 
   const [models, setModels] = useState<{ name: string; modelName: string }[]>([
     { name: "llama3.1", modelName: "llama3.1:8b" },
@@ -41,13 +43,6 @@ export default function Home() {
     textArea.style.height = "auto";
     textArea.style.height = Math.min(textArea.scrollHeight, 120) + "px"; // Max height ~5 lines
   };
-
-  // .forEach((item) => {
-  //   console.log(item);
-  //   item.addEventListener("click", () => {
-  //     console.log("Hello world");
-  //   });
-  // });
 
   useEffect(() => {
     if (!sessionInformation) {
@@ -122,11 +117,13 @@ export default function Home() {
         ? {
             message: inputMessage,
             user_email: sessionInformation.email,
+            use_knowledge_base: shouldUseKnowledgeBase,
           }
         : {
             message: inputMessage,
             chat_id: activeChatId,
             user_email: sessionInformation.email,
+            use_knowledge_base: shouldUseKnowledgeBase,
           };
 
     try {
@@ -287,35 +284,57 @@ export default function Home() {
           </div>
         )}
 
-        <div className="bg-slate-200 border-t p-1 absolut w-full bottom-0 rounded-t-lg">
+        <div className="bg-[#bdc3c7] border-t p-1 absolut w-full bottom-0 rounded-t-lg">
           <textarea
             ref={textAreaRef}
             value={inputMessage}
             onChange={handleInputChange}
             onKeyDown={handleKeyPress}
-            className="w-full p-2 rounded resize-none overflow-y-auto max-h-[120px] outline-none bg-slate-100"
+            className="w-full p-2 rounded resize-none overflow-y-auto max-h-[120px] outline-none bg-gray-100"
             placeholder="Type your message..."
             rows={1}
             autoFocus
           />
 
           <div className="flex items-center justify-between mt-2">
-            <select
-              value={models[selectedModel].modelName}
-              onChange={handleModelChange}
-              className="p-2 border rounded bg-slate-100"
-              disabled={messageState.isGenerating}
-            >
-              {models.map((model) => (
-                <option key={model.modelName} value={model.modelName}>
-                  {model.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select
+                value={models[selectedModel].modelName}
+                onChange={handleModelChange}
+                className="p-2 border rounded bg-slate-100"
+                disabled={messageState.isGenerating}
+              >
+                {models.map((model) => (
+                  <option key={model.modelName} value={model.modelName}>
+                    {model.name}
+                  </option>
+                ))}
+              </select>
+
+              <div>
+                <input
+                  type="checkbox"
+                  id="knowledgeBase"
+                  className="hidden peer"
+                  required
+                  value={shouldUseKnowledgeBase as any}
+                  onChange={(e) => setShouldUseKnowledgeBase(e.target.checked)}
+                />
+                <label
+                  htmlFor="knowledgeBase"
+                  className="inline-flex items-center justify-between w-full p-2 text-gray-600 bg-white border-2 border-gray-200 rounded-lg cursor-pointer peer-checked:border-blue-600 peer-checked:text-black"
+                >
+                  <div className="flex justify-center items-center gap-1">
+                    <Brain className="w-5 h-5" />
+                    <span>Knowledge Base</span>
+                  </div>
+                </label>
+              </div>
+            </div>
 
             <button
               onClick={send}
-              className="p-2 text-blue-500 rounded-full hover:bg-gray-400"
+              className="p-2 text- rounded-full hover:bg-gray-400"
             >
               <FaArrowCircleUp className="w-6 h-6" />
             </button>

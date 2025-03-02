@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { FaArrowCircleUp } from "react-icons/fa";
+import { FaArrowCircleUp, FaArrowUp } from "react-icons/fa";
 import WithSidebar from "@/layouts/WithSidebar";
 import { useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
@@ -12,7 +12,13 @@ import { useUserChatsStore } from "@/stores/userChatsStore";
 import { toast } from "react-toastify";
 import { useActiveChat } from "@/stores/activeChat";
 import { useIsGeneratingStore } from "@/stores/useIsGeneratingStore";
-import { Brain } from "lucide-react";
+import { Brain, Square } from "lucide-react";
+
+class AuthEventSource extends EventSource {
+  constructor(url: string, configuration: any) {
+    super(url, configuration);
+  }
+}
 
 export default function Home() {
   const router = useRouter();
@@ -24,7 +30,7 @@ export default function Home() {
     isGenerating: boolean;
     message: string;
   }>({ isGenerating: false, message: "" });
-  const { setIsGenerating } = useIsGeneratingStore();
+  const { isGenerating, setIsGenerating } = useIsGeneratingStore();
   const [shouldUseKnowledgeBase, setShouldUseKnowledgeBase] = useState(false);
 
   const [models, setModels] = useState<{ name: string; modelName: string }[]>([
@@ -36,6 +42,7 @@ export default function Home() {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   const [token, sessionInformation] = useAuth();
+  const [socket, setSocket] = useState<AuthEventSource | null>(null);
 
   const autoResize = () => {
     const textArea: HTMLTextAreaElement | null = textAreaRef.current;
@@ -162,15 +169,46 @@ export default function Home() {
     }
   };
 
+  const handleClosingSocket = async (currentMessage: string, id: string) => {
+    try {
+      currentMessage = currentMessage.replace(
+        "<think>",
+        "<div class='thinking' data-state='closed'>"
+      );
+      currentMessage = currentMessage.replace("</think>", "</div>");
+      currentMessage = currentMessage.replace(
+        "<div class='thinking' data-state='open'>",
+        "<div class='thinking' data-state='closed'>"
+      );
+
+      console.log(currentMessage);
+
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/update-chat`,
+        { chat_id: id, full_message: currentMessage.trim() },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      addNewMessage({
+        message: currentMessage,
+        sender: "ai",
+      });
+
+      setMessageState({ isGenerating: false, message: "" });
+      setIsGenerating(false);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "An error occurred");
+      console.log(error);
+    }
+  };
+
   const getBotMessage = async (id: string) => {
     try {
-      class AuthEventSource extends EventSource {
-        constructor(url: string, configuration: any) {
-          super(url, configuration);
-        }
-      }
-
-      const eventSource = new AuthEventSource(
+      const socket = new AuthEventSource(
         `${process.env.NEXT_PUBLIC_API_URL}/generate-response?chat_id=${id}&token=${token}`,
         {
           headers: {
@@ -178,64 +216,34 @@ export default function Home() {
           },
         }
       );
+      setSocket(socket);
       setMessageState({ isGenerating: true, message: "" });
 
       let currentMessage = "";
 
-      eventSource.onmessage = (event) => {
+      socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        currentMessage += data.partial_response;
+        if (data.completed) {
+          socket.close();
+          handleClosingSocket(currentMessage, id);
+          return;
+        }
 
-        currentMessage = currentMessage.replace(
-          "<think>",
-          "<div class='thinking' data-state='open'>"
-        );
-        currentMessage = currentMessage.replace("</think>", "</div>");
+        currentMessage += data.partial_response
+          .replace("<think>", "<div class='thinking' data-state='open'>")
+          .replace("</think>", "</div>");
 
         setMessageState({ isGenerating: false, message: currentMessage });
       };
 
       // @ts-ignore
-      eventSource.onclose = async () => {
-        try {
-          currentMessage = currentMessage.replace(
-            "<think>",
-            "<div class='thinking' data-state='closed'>"
-          );
-          currentMessage = currentMessage.replace("</think>", "</div>");
-          currentMessage = currentMessage.replace(
-            "<div class='thinking' data-state='open'>",
-            "<div class='thinking' data-state='closed'>"
-          );
-
-          console.log(currentMessage);
-
-          await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/update-chat`,
-            { chat_id: id, full_message: currentMessage.trim() },
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-
-          addNewMessage({
-            message: currentMessage,
-            sender: "ai",
-          });
-
-          setMessageState({ isGenerating: false, message: "" });
-          setIsGenerating(false);
-        } catch (error: any) {
-          toast.error(error.response?.data?.message || "An error occurred");
-          console.log(error);
-        }
+      socket.onclose = async () => {
+        handleClosingSocket(currentMessage, id);
       };
 
-      eventSource.onerror = (error) => {
+      socket.onerror = (error) => {
         console.error("EventSource failed:", error);
-        eventSource.close();
+        socket.close();
         // @ts-ignore
         error.target.onclose();
 
@@ -245,6 +253,15 @@ export default function Home() {
     } catch (error: any) {
       toast.error(error.response?.data?.message || "An error occurred");
       console.log(error);
+    }
+  };
+
+  const stopCurrentMessage = async () => {
+    console.log("Stopping current message");
+    console.log(socket);
+    if (socket) {
+      socket.close();
+      handleClosingSocket(messageState.message, activeChatId);
     }
   };
 
@@ -333,10 +350,14 @@ export default function Home() {
             </div>
 
             <button
-              onClick={send}
-              className="p-2 text- rounded-full hover:bg-gray-400"
+              onClick={isGenerating ? stopCurrentMessage : send}
+              className="bg-white p-3 text- rounded-full hover:bg-gray-200"
             >
-              <FaArrowCircleUp className="w-6 h-6" />
+              {isGenerating ? (
+                <div className="w-4 h-4 bg-black"></div>
+              ) : (
+                <FaArrowUp className="w-4 h-4" />
+              )}
             </button>
           </div>
         </div>

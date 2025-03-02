@@ -94,6 +94,7 @@ async def add_message(
     message: str = Body(...),
     chat_id: str = Body(None),
     user_email: str = Body(...),
+    use_knowledge_base: bool = Body(False),
 ):
     if chat_id is None:
         # we need to create a new chat
@@ -104,6 +105,7 @@ async def add_message(
                 {
                     "sender": "human",
                     "message": message,
+                    "use_knowledge_base": use_knowledge_base,
                 }
             ],
         )
@@ -136,6 +138,7 @@ async def add_message(
         {
             "sender": "human",
             "message": message,
+            "use_knowledge_base": use_knowledge_base,
         }
     )
 
@@ -195,7 +198,7 @@ def get_context_string(length: int, chat: dict) -> str:
     pairs = []
     pair = []
     for message in chat["messages"]:
-        if message['sender'] == 'human':
+        if message["sender"] == "human":
             pair = [f"Human: `{message['message']}`"]
         else:
             pair.append(f"Assistant: `{message['message']}")
@@ -219,7 +222,6 @@ async def generate_response(chat_id: str):
     chat = await app.database["chats"].find_one({"_id": ObjectId(chat_id)})
     if not chat:
         return
-    
 
     user_email = chat["user_email"]
     user = await app.database["users"].find_one({"email": user_email})
@@ -243,7 +245,6 @@ async def generate_response(chat_id: str):
 
     if not last_human_message:
         return
-
 
     is_instructions = False
     if (
@@ -361,11 +362,11 @@ async def change_model(response: Response, request: Request):
     if model is None:
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {"success": False, "message": "Model is required"}
-    
 
     app.llm = ChatOllama(model=model)
     response.status_code = status.HTTP_200_OK
     return {"success": True, "message": f"Changed LLM model to {model}"}
+
 
 # A health endpoint
 @app.get("/health")

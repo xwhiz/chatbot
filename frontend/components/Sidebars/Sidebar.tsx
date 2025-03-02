@@ -55,6 +55,7 @@ export function Sidebar() {
     };
 
     fetchChatIDs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, token]);
 
   const menuItems = {

@@ -3,6 +3,7 @@ from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema import StrOutputParser
 from langchain.prompts import ChatPromptTemplate
 from datetime import datetime
+import html
 
 
 def current_date() -> str:
@@ -13,11 +14,13 @@ def initialize_qa_chain(
     llm: ChatOllama,
     retriever,
     user_custom_prompt: str,
-    context: str,
+    chat_history: str,
     use_retriever: bool = False,
 ):
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
+
+    chat_history = chat_history.replace("{", "{{").replace("}", "}}")
 
     system_prompt = """
     <role>%s</role>
@@ -34,7 +37,7 @@ def initialize_qa_chain(
     </instructions>
 
     <chat-history>%s</chat-history>
-    """ % (user_custom_prompt, current_date(), context)
+    """ % (user_custom_prompt, current_date(), chat_history)
 
     print("\r\nDEBUG:", system_prompt, "\n\r\n")
     print("Should use retriever:", use_retriever)

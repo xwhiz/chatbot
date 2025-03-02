@@ -298,7 +298,9 @@ async def generate_response(chat_id: str):
 
     try:
         # stream = qa_chain.stream(last_human_message["message"])
-        stream = qa_chain.stream(rephrased_question)
+        stream = qa_chain.stream(
+            f"Question: {last_human_message['message']}\nRephrased Question: {rephrased_question}"
+        )
     except Exception as e:
         print("Error in generating response:", e)
 

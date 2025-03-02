@@ -35,14 +35,8 @@ export default function Home() {
   const [selectedModel, setSelectedModel] = useState<number>(0);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
-  class AuthEventSource extends EventSource {
-    constructor(url: string, configuration: any) {
-      super(url, configuration);
-    }
-  }
-
   const [token, sessionInformation] = useAuth();
-  const [socket, setSocket] = useState<AuthEventSource | null>(null);
+  const [socket, setSocket] = useState<any>(null);
 
   const autoResize = () => {
     const textArea: HTMLTextAreaElement | null = textAreaRef.current;
@@ -208,6 +202,12 @@ export default function Home() {
 
   const getBotMessage = async (id: string) => {
     try {
+      class AuthEventSource extends EventSource {
+        constructor(url: string, configuration: any) {
+          super(url, configuration);
+        }
+      }
+
       const socket = new AuthEventSource(
         `${process.env.NEXT_PUBLIC_API_URL}/generate-response?chat_id=${id}&token=${token}`,
         {

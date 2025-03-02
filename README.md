@@ -87,7 +87,7 @@ First of all, you need to have Ollama installed on your system. If you don't hav
 Then in the terminal, run the following command to start the Ollama server:
 
 ```bash
-ollama pull llama3.1:8b
+ollama pull llama3.1
 ollama pull deepseek-r1:14b
 ollama pull qwen2.5:14b
 ```

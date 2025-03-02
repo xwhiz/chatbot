@@ -286,6 +286,8 @@ async def generate_response(chat_id: str):
     for chunk in stream:
         yield f"data: {json.dumps({'chat_id': chat_id, 'partial_response': chunk}).strip()}\n\n"
 
+    yield f"data: {json.dumps({'chat_id': chat_id, 'completed': True}).strip()}\n\n"
+
 
 @app.get("/generate-response")
 async def bot_response(chat_id: str, token: str):

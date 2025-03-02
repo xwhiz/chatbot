@@ -4,7 +4,14 @@ import { useActionState, useEffect, useState } from "react";
 import { useSidebarStore } from "@/stores/sidebar";
 import { FaTimes } from "react-icons/fa";
 import { FaTrash, FaChevronDown } from "react-icons/fa6";
-import { User, Users, MessageSquare, Upload, Plus } from "lucide-react";
+import {
+  User,
+  Users,
+  MessageSquare,
+  Upload,
+  Plus,
+  PlusCircle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import useAuth from "@/hooks/useAuth";
@@ -21,9 +28,9 @@ export function Sidebar() {
   const [token, session] = useAuth();
   const router = useRouter();
   const { isOpen } = useSidebarStore();
-  const { activeChatId, setActiveChatId } = useActiveChatID();
+  const { setActiveChatId } = useActiveChatID();
   const { chatIDs, setChatIDs } = useUserChatsStore();
-  const { chat, setActiveChat } = useActiveChat();
+  const { setActiveChat } = useActiveChat();
   const { isGenerating } = useIsGeneratingStore();
 
   useEffect(() => {
@@ -126,7 +133,25 @@ export function Sidebar() {
               <User />
               <span className="ml-2">Profile</span>
             </Link>
-            <div className="px-4 py-2 text-gray-700 font-semibold">Chats</div>
+            <h3 className="flex justify-between items-center px-4 py-2 text-gray-700 font-semibold">
+              Chats
+              <button
+                className="text-white bg-blue-400 hover:bg-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-1 py-1 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                onClick={() => {
+                  if (isGenerating) return;
+                  setActiveChat({
+                    id: "",
+                    title: "",
+                    user_email: "",
+                    messages: [],
+                  });
+                  useActiveChatID.setState({ activeChatId: "" });
+                  router.replace("/");
+                }}
+              >
+                <Plus className="w-6 h-6" />
+              </button>
+            </h3>
             <div className="overflow-y-auto">
               {chatIDs.map((chat) => (
                 <button
@@ -160,23 +185,6 @@ export function Sidebar() {
                 </button>
               ))}
             </div>
-            <a
-              className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 mt-2 hover:cursor-pointer"
-              onClick={() => {
-                if (isGenerating) return;
-                setActiveChat({
-                  id: "",
-                  title: "",
-                  user_email: "",
-                  messages: [],
-                });
-                useActiveChatID.setState({ activeChatId: "" });
-                router.replace("/");
-              }}
-            >
-              <Plus className="w-4 h-4" />
-              <span className="ml-2">New Chat</span>
-            </a>
           </>
         )}
       </nav>

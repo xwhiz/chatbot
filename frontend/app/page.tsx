@@ -14,12 +14,6 @@ import { useActiveChat } from "@/stores/activeChat";
 import { useIsGeneratingStore } from "@/stores/useIsGeneratingStore";
 import { Brain, Square } from "lucide-react";
 
-class AuthEventSource extends EventSource {
-  constructor(url: string, configuration: any) {
-    super(url, configuration);
-  }
-}
-
 export default function Home() {
   const router = useRouter();
   const [inputMessage, setInputMessage] = useState("");
@@ -40,6 +34,12 @@ export default function Home() {
   ]);
   const [selectedModel, setSelectedModel] = useState<number>(0);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
+  class AuthEventSource extends EventSource {
+    constructor(url: string, configuration: any) {
+      super(url, configuration);
+    }
+  }
 
   const [token, sessionInformation] = useAuth();
   const [socket, setSocket] = useState<AuthEventSource | null>(null);

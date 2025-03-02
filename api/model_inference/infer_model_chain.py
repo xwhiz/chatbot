@@ -4,48 +4,75 @@ from langchain.schema import StrOutputParser
 from langchain.prompts import ChatPromptTemplate
 from datetime import datetime
 
+
 def current_date() -> str:
     return datetime.now().strftime("%Y-%m-%d %A")
 
 
-
-def initialize_qa_chain(llm: ChatOllama, retriever, user_custom_prompt: str, context: str):
+def initialize_qa_chain(
+    llm: ChatOllama,
+    retriever,
+    user_custom_prompt: str,
+    context: str,
+    use_retriever: bool = False,
+):
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
 
-    RAG_TEMPLATE = """
-    Your role: ###%s###
+    system_prompt = """
+    <role>%s</role>
 
-    NOTE: You must not forget that todays date is ### %s ###
+    <current-date>%s</current-date>
+    
 
+    <instructions>
     You are an assistant designed for question-answering tasks. 
     - Use the provided pieces of retrieved context to answer questions as accurately as possible. 
     - When the context does not directly provide an answer, or when the question is unrelated to the context, 
     - use your general knowledge to respond appropriately. 
     - Avoid referencing the retrieved context when it is irrelevant to the question.
-    
-    <context>
-    ###Previous Chat Context: %s###
-    {context}
-    </context>
+    </instructions>
 
-    Answer the following question:
-    {question}
+    <chat-history>%s</chat-history>
     """ % (user_custom_prompt, current_date(), context)
 
-    print("\r\nDEBUG:", RAG_TEMPLATE, "\r\n")
+    print("\r\nDEBUG:", system_prompt, "\n\r\n")
+    print("Should use retriever:", use_retriever)
 
+    if use_retriever:
+        system_prompt += """
+        <context>
+        {context}
+        </context>
 
-    rag_prompt = ChatPromptTemplate.from_template(RAG_TEMPLATE)
-    qa_chain = (
-        {
-            "context": retriever | format_docs,
-            "customPrompt": RunnablePassthrough(),
-            "question": RunnablePassthrough(),
-        }
-        | rag_prompt
-        | llm
-        | StrOutputParser()
-    )
+        Answer the following question:
+        <question>{question}</question>
+        """
+        rag_prompt = ChatPromptTemplate.from_template(system_prompt)
+        qa_chain = (
+            {
+                "context": retriever | format_docs,
+                "customPrompt": RunnablePassthrough(),
+                "question": RunnablePassthrough(),
+            }
+            | rag_prompt
+            | llm
+            | StrOutputParser()
+        )
+    else:
+        system_prompt += """
+        Answer the following question:
+        <question>{question}</question>
+        """
+        rag_prompt = ChatPromptTemplate.from_template(system_prompt)
+        qa_chain = (
+            {
+                "customPrompt": RunnablePassthrough(),
+                "question": RunnablePassthrough(),
+            }
+            | rag_prompt
+            | llm
+            | StrOutputParser()
+        )
 
     return qa_chain

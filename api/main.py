@@ -15,7 +15,7 @@ from qdrant_client.http import models as rest
 from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_ollama import ChatOllama
 
-from model_inference import initialize_qa_chain
+from model_inference import initialize_qa_chain, rephrase_question
 from lifespan import lifespan
 from models import Chat
 from auth import decode_jwt
@@ -235,7 +235,6 @@ async def generate_response(chat_id: str):
     context_length = 5
     context_string = get_context_string(context_length, chat)
     retriever = await get_retriever_for_user(chat["user_email"])
-    qa_chain = initialize_qa_chain(app.llm, retriever, prompt, context_string)
 
     last_human_message = None
     for message in reversed(chat["messages"]):
@@ -245,6 +244,14 @@ async def generate_response(chat_id: str):
 
     if not last_human_message:
         return
+
+    qa_chain = initialize_qa_chain(
+        app.llm,
+        retriever,
+        prompt,
+        context_string,
+        last_human_message["use_knowledge_base"],
+    )
 
     is_instructions = False
     if (
@@ -272,10 +279,26 @@ async def generate_response(chat_id: str):
         return
 
     print("Generating response for:", last_human_message["message"])
-    print(retriever.invoke(last_human_message["message"]))
+
+    # all user asked messages
+    history = [
+        f"{message['sender']}: {message['message']}" for message in chat["messages"]
+    ]
+
+    rephrased_question = (
+        rephrase_question(history, last_human_message["message"]).split(":")[-1].strip()
+    )
+
+    if last_human_message["use_knowledge_base"]:
+        print(retriever.invoke(rephrased_question))
+
+    print("*" * 25)
+    print("Rephrased question:", rephrased_question)
+    print("*" * 25)
 
     try:
-        stream = qa_chain.stream(last_human_message["message"])
+        # stream = qa_chain.stream(last_human_message["message"])
+        stream = qa_chain.stream(rephrased_question)
     except Exception as e:
         print("Error in generating response:", e)
 

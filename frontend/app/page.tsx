@@ -181,7 +181,7 @@ export default function Home() {
         "<div class='thinking' data-state='closed'>"
       );
 
-      console.log(currentMessage);
+      // console.log(currentMessage);
 
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/update-chat`,

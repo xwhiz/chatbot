@@ -36,7 +36,11 @@ async def lifespan(app: FastAPI):
         print(f"Creating collection: {collection_name}")
         client.create_collection(
             collection_name=collection_name,
-            vectors_config=VectorParams(size=1024, distance=Distance.COSINE, on_disk=True),
+            vectors_config=VectorParams(
+                size=1024,
+                distance=Distance.COSINE,
+                on_disk=True,
+            ),
         )
 
     app.client = client

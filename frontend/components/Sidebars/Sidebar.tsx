@@ -153,7 +153,7 @@ export function Sidebar() {
               </button>
             </h3>
             <div className="overflow-y-auto">
-              {chatIDs.map((chat) => (
+              {chatIDs.toReversed().map((chat) => (
                 <button
                   key={chat.id}
                   className={`trigger hover:cursor-pointer border-none bg-transparent flex w-full items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-200 ${

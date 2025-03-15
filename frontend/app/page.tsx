@@ -44,28 +44,7 @@ export default function Home() {
   const [socket, setSocket] = useState<any>(null);
   const [docSelectionModalOpen, setDocSelectionModalOpen] =
     useState<boolean>(false);
-  const [allDocuments, setAllDocuments] = useState<Document[]>([
-    {
-      id: "1",
-      title: "Document 1",
-    },
-    {
-      id: "2",
-      title: "Document 2",
-    },
-    {
-      id: "3",
-      title: "Document 3",
-    },
-    {
-      id: "4",
-      title: "Document 4",
-    },
-    {
-      id: "5",
-      title: "Document 5",
-    },
-  ]);
+  const [allDocuments, setAllDocuments] = useState<Document[]>([]);
   const [selectedDocsForKB, setSelectedDocsForKB] = useState<Document[]>([]);
 
   const autoResize = () => {
@@ -101,7 +80,25 @@ export default function Home() {
       }
     };
 
+    const fetchAllowedDocuments = async () => {
+      try {
+        const response = await axios.get(
+          process.env.NEXT_PUBLIC_API_URL + `/documents/user-allowed-docs/`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        const documents = response.data.data;
+        setAllDocuments(documents);
+      } catch (error: any) {
+        console.log(error);
+      }
+    };
+
     fetchChats();
+    fetchAllowedDocuments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeChatId, sessionInformation, token]);
 

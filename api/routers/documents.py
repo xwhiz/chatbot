@@ -305,7 +305,7 @@ async def get_user_documents_count(request: Request, response: Response, userid:
 
 
 @router.get("/allowed-docs/{userid}")
-async def get_user_documents(
+async def get_allowed_documents(
     request: Request, response: Response, userid: str, page: int = 0, limit: int = 10
 ):
     app = request.app
@@ -400,4 +400,54 @@ async def get_not_allowed_docs(request: Request, response: Response, userid: str
         "success": True,
         "message": "Documents retrieved successfully",
         "data": not_allowed_documents,
+    }
+
+
+@router.get("/user-allowed-docs/")
+async def get_allowed_documents(
+    request: Request, response: Response
+):
+    app = request.app
+
+    # if it's admin, allow else return unauthorized
+    payload = request.state.payload
+    
+    # get current user
+    user = await app.database["users"].find_one({"email": payload['email']})
+    if not user:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"success": False, "message": "User not found"}
+
+    documents = await app.database["documents"].find({}).to_list(length=1000)
+
+    if user["accessible_docs"] == ["all"]:
+        documents = [
+            {
+                "id": str(document["_id"]),
+                "title": document["title"],
+            }
+            for document in documents
+        ]
+
+        return {
+            "success": True,
+            "message": "Documents retrieved successfully",
+            "data": documents,
+        }
+
+    accessible_docs = user["accessible_docs"]
+    accessible_documents = []
+    for document in documents:
+        if str(document["_id"]) in accessible_docs:
+            accessible_documents.append(
+                {
+                    "id": str(document["_id"]),
+                    "title": document["title"],
+                }
+            )
+
+    return {
+        "success": True,
+        "message": "Documents retrieved successfully",
+        "data": accessible_documents,
     }

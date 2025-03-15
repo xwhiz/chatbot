@@ -40,7 +40,7 @@ def rephrase_question(history: list[str], current_question: str) -> str:
         "\n".join(history).replace("{", "{{").replace("}", "}}"),
     )
 
-    model = ChatOllama(model="llama3.1", num_ctx=8192)
+    model = ChatOllama(model="qwen2.5:14b", num_ctx=8192)
     qa_chain = (
         {
             "prompt": RunnablePassthrough(),

@@ -1,19 +1,23 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { FaArrowCircleUp, FaArrowUp } from "react-icons/fa";
+import { FaArrowUp } from "react-icons/fa";
 import WithSidebar from "@/layouts/WithSidebar";
 import { useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
 import MessagesFromActiveChatState from "../components/Chats/MessagesFromActiveChatState";
-import { Message } from "@/stores/activeChat";
 import { useActiveChatID } from "@/stores/activeChatID";
 import axios from "axios";
 import { useUserChatsStore } from "@/stores/userChatsStore";
 import { toast } from "react-toastify";
 import { useActiveChat } from "@/stores/activeChat";
 import { useIsGeneratingStore } from "@/stores/useIsGeneratingStore";
-import { Brain } from "lucide-react";
-import { Backdrop, Box, Fade, Modal } from "@mui/material";
+import { Brain, Minus, Plus, PlusCircle, PlusCircleIcon } from "lucide-react";
+import { Backdrop, Fade, Modal } from "@mui/material";
+
+type Document = {
+  id: string;
+  title: string;
+};
 
 export default function Home() {
   const router = useRouter();
@@ -40,6 +44,29 @@ export default function Home() {
   const [socket, setSocket] = useState<any>(null);
   const [docSelectionModalOpen, setDocSelectionModalOpen] =
     useState<boolean>(false);
+  const [allDocuments, setAllDocuments] = useState<Document[]>([
+    {
+      id: "1",
+      title: "Document 1",
+    },
+    {
+      id: "2",
+      title: "Document 2",
+    },
+    {
+      id: "3",
+      title: "Document 3",
+    },
+    {
+      id: "4",
+      title: "Document 4",
+    },
+    {
+      id: "5",
+      title: "Document 5",
+    },
+  ]);
+  const [selectedDocsForKB, setSelectedDocsForKB] = useState<Document[]>([]);
 
   const autoResize = () => {
     const textArea: HTMLTextAreaElement | null = textAreaRef.current;
@@ -394,10 +421,10 @@ export default function Home() {
         }}
       >
         <Fade in={docSelectionModalOpen}>
-          <article className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-min bg-white shadow-md max-w-[420px] w-full overflow-hidden rounded">
-            <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600 border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Open positions
+          <article className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-min bg-white shadow-md max-w-[600px] w-full overflow-hidden rounded">
+            <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                Select documents
               </h3>
               <button
                 type="button"
@@ -421,6 +448,76 @@ export default function Home() {
                 </svg>
                 <span className="sr-only">Close modal</span>
               </button>
+            </div>
+
+            {/* Modal body */}
+            <div className="p-4 md:p-5 space-y-2">
+              <h3>Documents</h3>
+              <div className="flex flex-wrap gap-1">
+                {allDocuments.filter(
+                  (item) => !selectedDocsForKB.includes(item)
+                ).length === 0 && (
+                  <span className="bg-gray-100 text-gray-800 me-2 px-2.5 py-0.5 rounded-full">
+                    All documents selected
+                  </span>
+                )}
+
+                {allDocuments
+                  .filter((item) => !selectedDocsForKB.includes(item))
+                  .map((item, i) => {
+                    return (
+                      <button
+                        key={i}
+                        className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-2 focus:ring-gray-100 rounded-full pl-4 pr-2 py-2.5 flex gap-1 items-center"
+                        onClick={() => {
+                          if (selectedDocsForKB.includes(item)) {
+                            setSelectedDocsForKB(
+                              selectedDocsForKB.filter(
+                                (doc) => doc.id != item.id
+                              )
+                            );
+                          } else {
+                            setSelectedDocsForKB([...selectedDocsForKB, item]);
+                          }
+                        }}
+                      >
+                        {item.title}
+                        <Plus />
+                      </button>
+                    );
+                  })}
+              </div>
+
+              <hr />
+
+              <h3>Selected Documents</h3>
+              <div className="flex flex-wrap gap-1">
+                {selectedDocsForKB.length === 0 && (
+                  <span className="bg-gray-100 text-gray-800 me-2 px-2.5 py-0.5 rounded-full">
+                    No documents selected
+                  </span>
+                )}
+                {selectedDocsForKB.map((item, i) => {
+                  return (
+                    <button
+                      key={i}
+                      className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-2 focus:ring-gray-100 rounded-full pl-4 pr-2 py-2.5 flex gap-1 items-center"
+                      onClick={() => {
+                        if (selectedDocsForKB.includes(item)) {
+                          setSelectedDocsForKB(
+                            selectedDocsForKB.filter((doc) => doc.id != item.id)
+                          );
+                        } else {
+                          setSelectedDocsForKB([...selectedDocsForKB, item]);
+                        }
+                      }}
+                    >
+                      {item.title}
+                      <Minus />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </article>
         </Fade>

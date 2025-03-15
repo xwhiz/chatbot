@@ -92,6 +92,7 @@ export default function Home() {
         );
         const documents = response.data.data;
         setAllDocuments(documents);
+        setSelectedDocsForKB([]);
       } catch (error: any) {
         console.log(error);
       }
@@ -187,6 +188,8 @@ export default function Home() {
     } catch (error: any) {
       toast.error(error.response.data.message);
       console.log(error);
+      setMessageState({ isGenerating: false, message: "" });
+      setIsGenerating(false);
     }
   };
 

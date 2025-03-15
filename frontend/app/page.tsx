@@ -144,13 +144,13 @@ export default function Home() {
       message: string;
       user_email: string;
       use_knowledge_base: boolean;
-      selectedDocs: Document[];
+      selected_docs: Document[];
       chat_id?: string;
     } = {
       message: inputMessage,
       user_email: sessionInformation.email,
       use_knowledge_base: shouldUseKnowledgeBase,
-      selectedDocs: selectedDocsForKB,
+      selected_docs: selectedDocsForKB,
     };
     if (activeChatId !== "") body.chat_id = activeChatId;
 

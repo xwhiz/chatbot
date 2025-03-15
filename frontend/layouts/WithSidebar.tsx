@@ -7,7 +7,7 @@ export default function WithSidebar({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex bg-[#ecf0f1]">
+    <div className="flex bg-[hsl(192,15%,96%)]">
       <Sidebar />
       <div className="relative flex-1 h-screen w-full overflow-idden flex flex-col">
         <HeaderWithButton />

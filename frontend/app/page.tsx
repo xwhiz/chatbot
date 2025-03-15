@@ -289,79 +289,83 @@ export default function Home() {
   };
 
   return (
-    <WithSidebar>
-      <div className="relative max-w-[50rem] w-full mx-auto h-full flex flex-col">
-        <MessagesFromActiveChatState message={messageState.message} />
+    <>
+      <WithSidebar>
+        <div className="relative max-w-[50rem] w-full mx-auto h-full flex flex-col">
+          <MessagesFromActiveChatState message={messageState.message} />
 
-        {messageState.isGenerating && (
-          <div className="flex justify-center items-center h-16">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+          {messageState.isGenerating && (
+            <div className="flex justify-center items-center h-16">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
 
-            <p className="ml-2">Retrieving relevent data...</p>
-          </div>
-        )}
-
-        <div className="bg-[#bdc3c7] border-t p-1 absolut w-full bottom-0 rounded-t-lg">
-          <textarea
-            ref={textAreaRef}
-            value={inputMessage}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyPress}
-            className="w-full p-2 rounded resize-none overflow-y-auto max-h-[120px] outline-none bg-gray-100"
-            placeholder="Type your message..."
-            rows={1}
-            autoFocus
-          />
-
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex gap-2">
-              <select
-                value={models[selectedModel].modelName}
-                onChange={handleModelChange}
-                className="p-2 border rounded bg-slate-100"
-                disabled={messageState.isGenerating}
-              >
-                {models.map((model) => (
-                  <option key={model.modelName} value={model.modelName}>
-                    {model.name}
-                  </option>
-                ))}
-              </select>
-
-              <div>
-                <input
-                  type="checkbox"
-                  id="knowledgeBase"
-                  className="hidden peer"
-                  required
-                  value={shouldUseKnowledgeBase as any}
-                  onChange={(e) => setShouldUseKnowledgeBase(e.target.checked)}
-                />
-                <label
-                  htmlFor="knowledgeBase"
-                  className="inline-flex items-center justify-between w-full p-2 text-gray-600 bg-white border-2 border-gray-200 rounded-lg cursor-pointer peer-checked:border-blue-600 peer-checked:text-black"
-                >
-                  <div className="flex justify-center items-center gap-1">
-                    <Brain className="w-5 h-5" />
-                    <span>Knowledge Base</span>
-                  </div>
-                </label>
-              </div>
+              <p className="ml-2">Retrieving relevent data...</p>
             </div>
+          )}
 
-            <button
-              onClick={isGenerating ? stopCurrentMessage : send}
-              className="bg-white p-3 text- rounded-full hover:bg-gray-200"
-            >
-              {isGenerating ? (
-                <div className="w-4 h-4 bg-black"></div>
-              ) : (
-                <FaArrowUp className="w-4 h-4" />
-              )}
-            </button>
+          <div className="bg-white border-t p-1 absolut w-full bottom-0 rounded-t-lg">
+            <textarea
+              ref={textAreaRef}
+              value={inputMessage}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyPress}
+              className="w-full p-2 rounded resize-none overflow-y-auto max-h-[120px] outline-none bg-gray-100"
+              placeholder="Type your message..."
+              rows={1}
+              autoFocus
+            />
+
+            <div className="flex items-center justify-between mt-2">
+              <div className="flex gap-2">
+                <select
+                  value={models[selectedModel].modelName}
+                  onChange={handleModelChange}
+                  className="p-2 border rounded bg-slate-100"
+                  disabled={messageState.isGenerating}
+                >
+                  {models.map((model) => (
+                    <option key={model.modelName} value={model.modelName}>
+                      {model.name}
+                    </option>
+                  ))}
+                </select>
+
+                <div>
+                  <input
+                    type="checkbox"
+                    id="knowledgeBase"
+                    className="hidden peer"
+                    required
+                    value={shouldUseKnowledgeBase as any}
+                    onChange={(e) =>
+                      setShouldUseKnowledgeBase(e.target.checked)
+                    }
+                  />
+                  <label
+                    htmlFor="knowledgeBase"
+                    className="inline-flex items-center justify-between w-full p-2 text-gray-600 bg-white border-2 border-gray-200 rounded-lg cursor-pointer peer-checked:border-blue-600 peer-checked:text-black"
+                  >
+                    <div className="flex justify-center items-center gap-1">
+                      <Brain className="w-5 h-5" />
+                      <span>Knowledge Base</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <button
+                onClick={isGenerating ? stopCurrentMessage : send}
+                className="bg-white p-3 text- rounded-full hover:bg-gray-200"
+              >
+                {isGenerating ? (
+                  <div className="w-4 h-4 bg-black"></div>
+                ) : (
+                  <FaArrowUp className="w-4 h-4" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </WithSidebar>
+      </WithSidebar>
+    </>
   );
 }

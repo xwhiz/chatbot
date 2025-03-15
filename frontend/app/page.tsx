@@ -325,10 +325,10 @@ export default function Home() {
           <MessagesFromActiveChatState message={messageState.message} />
 
           {messageState.isGenerating && (
-            <div className="flex justify-center items-center h-16">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-
-              <p className="ml-2">Responding...</p>
+            <div className="flex justify-center items-center h-16 pb-4">
+              {/* <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div> */}
+              <span className="loader"></span>
+              {/* <p className="ml-2">Responding...</p> */}
             </div>
           )}
 
@@ -345,11 +345,11 @@ export default function Home() {
             />
 
             <div className="flex items-center justify-between mt-2">
-              <div className="flex gap-2">
+              <div className="flex">
                 <select
                   value={models[selectedModel].modelName}
                   onChange={handleModelChange}
-                  className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2"
+                  className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-2 py-1 me-2 mb-2"
                   disabled={messageState.isGenerating}
                 >
                   {models.map((model) => (
@@ -374,7 +374,7 @@ export default function Home() {
                   />
                   <label
                     htmlFor="knowledgeBase"
-                    className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 inline-flex items-center justify-between w-full p-2 cursor-pointer peer-checked:border-blue-600 peer-checked:text-black"
+                    className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-2 py-1 me-2 mb-2 inline-flex items-center justify-between w-full p-2 cursor-pointer peer-checked:border-blue-600 peer-checked:text-black"
                   >
                     <div className="flex justify-center items-center gap-1">
                       <Brain className="w-5 h-5" />
@@ -385,7 +385,7 @@ export default function Home() {
 
                 {shouldUseKnowledgeBase && (
                   <button
-                    className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2"
+                    className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-2 py-1 ml-2 me-2 mb-2"
                     onClick={() => setDocSelectionModalOpen(true)}
                   >
                     Select Docs

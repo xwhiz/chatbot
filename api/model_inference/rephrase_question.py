@@ -15,25 +15,23 @@ def rephrase_question(history: list[str], current_question: str) -> str:
     %s
     </chat-history>
 
-    
     <instructions>
-    Rewrite the given text to improve clarity, conciseness, and specificity while ensuring the model can provide the best possible response.
-    - Maintain the original intent of the text.
-    - Resolve any ambiguity or vagueness.
-    - Use precise language to enhance understanding.
-    - Optimize for relevant details based on chat history **only if** they are related.
-    - If the text is unrelated to chat history, rephrase it independently without altering its original intent.
-    - Consider past responses to avoid redundant or ineffective rephrasings.
-    - Your response should ONLY be the rewritten text. No additional information is needed.
-    - The rewritten text should be concise and to the point.
-    - You must not remove information from the text. the rewritten text should be a better form of the original text, not a completely new text.
-    - It is not necessary that the user will always be asking question. So please try not to modify the intent of statements.
-    </instructions>
+    Rewrite the given text to enhance clarity, conciseness, and specificity while ensuring the model provides the best possible response.
+
+    - Maintain the original intent.
+    - Eliminate ambiguity or vagueness.
+    - Use precise language for better understanding.
+    - Optimize details based on chat history **only if** they are relevant.
+    - If the text is unrelated to chat history, rephrase it independently while preserving its meaning.
+    - Avoid redundant or ineffective rephrasings based on past responses.
+    - **Respond ONLY with the rewritten text.** No explanations or extra details.
+    - Ensure the rewritten text is **concise yet retains all information** from the original.
+    - Do not alter the intent of statements, as they may not always be questions.
 
     <requirement>
-    - The rewritten text should be clear, well-structured, and easy to understand. It should guide the model towards generating an accurate and informative response.
-    - If the text is unrelated to previous ones, ensure that its original meaning is preserved without unnecessary contextual adjustments.
-    - Avoid rephrasings that could lead to redundant or unclear answers.
+    - The rewritten text must be **clear, well-structured, and easy to understand** to guide the model toward an accurate and informative response.
+    - If the text is unrelated to previous chats, maintain its meaning without unnecessary contextual adjustments.
+    - Avoid rephrasings that could introduce redundancy or ambiguity.
     </requirement>
 
     <text>{input}</text>

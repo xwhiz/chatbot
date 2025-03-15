@@ -109,7 +109,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`w-64 h-screen pt-8 pb-2 bg-gray-100 text-white fixed z-50 top-0 left-0 flex flex-col gap-4 justify-start items-center transition-transform ease-out duration-300 md:static md:translate-x-0 ${
+      className={`w-64 h-screen pt-8 pb-2 bg-[hsl(220,13%,93%)] text-white fixed z-50 top-0 left-0 flex flex-col gap-4 justify-start items-center transition-transform ease-out duration-300 md:static md:translate-x-0 border-r ${
         isOpen ? "-translate-x-full" : "translate-x-0"
       }`}
     >

@@ -140,19 +140,19 @@ export default function Home() {
       return;
     }
 
-    const body =
-      activeChatId === ""
-        ? {
-            message: inputMessage,
-            user_email: sessionInformation.email,
-            use_knowledge_base: shouldUseKnowledgeBase,
-          }
-        : {
-            message: inputMessage,
-            chat_id: activeChatId,
-            user_email: sessionInformation.email,
-            use_knowledge_base: shouldUseKnowledgeBase,
-          };
+    const body: {
+      message: string;
+      user_email: string;
+      use_knowledge_base: boolean;
+      selectedDocs: Document[];
+      chat_id?: string;
+    } = {
+      message: inputMessage,
+      user_email: sessionInformation.email,
+      use_knowledge_base: shouldUseKnowledgeBase,
+      selectedDocs: selectedDocsForKB,
+    };
+    if (activeChatId !== "") body.chat_id = activeChatId;
 
     try {
       const response = await axios.post(
@@ -365,6 +365,7 @@ export default function Home() {
                     value={shouldUseKnowledgeBase as any}
                     onChange={(e) => {
                       setShouldUseKnowledgeBase(e.target.checked);
+                      setSelectedDocsForKB([]);
                       if (e.target.checked) setDocSelectionModalOpen(true);
                     }}
                   />

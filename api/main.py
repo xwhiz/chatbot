@@ -95,8 +95,15 @@ async def add_message(
     chat_id: str = Body(None),
     user_email: str = Body(...),
     use_knowledge_base: bool = Body(False),
-    selected_docs: list = Body(...)
+    selected_docs: list = Body(...),
 ):
+    if use_knowledge_base and len(selected_docs) == 0:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {
+            "success": False,
+            "message": "Please select at least one document or disable Knowledge Base.",
+        }
+
     if chat_id is None:
         # we need to create a new chat
         chat = Chat(
@@ -107,7 +114,7 @@ async def add_message(
                     "sender": "human",
                     "message": message,
                     "use_knowledge_base": use_knowledge_base,
-                    "selected_docs": selected_docs
+                    "selected_docs": selected_docs,
                 }
             ],
         )
@@ -141,7 +148,7 @@ async def add_message(
             "sender": "human",
             "message": message,
             "use_knowledge_base": use_knowledge_base,
-            "selected_docs": selected_docs
+            "selected_docs": selected_docs,
         }
     )
 
@@ -161,23 +168,10 @@ async def add_message(
     return {"success": True, "message": "Chat updated successfully", "chat_id": chat_id}
 
 
-async def get_retriever_for_user(user_email: str) -> VectorStoreRetriever:
-    user = await app.database["users"].find_one(
-        {"email": user_email}, {"accessible_docs": 1}
-    )
+async def get_retriever_for_user(selected_docs: list) -> VectorStoreRetriever:
+    print("Accessible docs", selected_docs)
 
-    accessible_docs = user.get("accessible_docs", [])
-
-    if "all" in accessible_docs:
-        return app.vector_store.as_retriever(
-            search_type="similarity",
-            search_kwargs={
-                "k": 5,
-                "score_threshold": 0.2,
-            },
-        )
-
-    print("Accessible docs", accessible_docs)
+    docs_ids = [doc["id"] for doc in selected_docs]
     return app.vector_store.as_retriever(
         search_type="similarity",
         search_kwargs={
@@ -188,7 +182,7 @@ async def get_retriever_for_user(user_email: str) -> VectorStoreRetriever:
                     rest.FieldCondition(
                         key="metadata.document_id",  # Ensure the path to metadata is correct
                         match=rest.MatchAny(
-                            any=accessible_docs,
+                            any=docs_ids,
                         ),
                     )
                 ]
@@ -246,11 +240,10 @@ async def generate_response(chat_id: str):
 
     if not last_human_message:
         return
-    
 
     print(last_human_message)
 
-    retriever = await get_retriever_for_user(chat["user_email"])
+    retriever = await get_retriever_for_user(last_human_message["selected_docs"])
 
     qa_chain = initialize_qa_chain(
         app.llm,

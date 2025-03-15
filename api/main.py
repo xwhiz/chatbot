@@ -95,6 +95,7 @@ async def add_message(
     chat_id: str = Body(None),
     user_email: str = Body(...),
     use_knowledge_base: bool = Body(False),
+    selected_docs: list = Body(...)
 ):
     if chat_id is None:
         # we need to create a new chat
@@ -106,6 +107,7 @@ async def add_message(
                     "sender": "human",
                     "message": message,
                     "use_knowledge_base": use_knowledge_base,
+                    "selected_docs": selected_docs
                 }
             ],
         )
@@ -139,6 +141,7 @@ async def add_message(
             "sender": "human",
             "message": message,
             "use_knowledge_base": use_knowledge_base,
+            "selected_docs": selected_docs
         }
     )
 
@@ -234,7 +237,6 @@ async def generate_response(chat_id: str):
 
     context_length = 5
     context_string = get_context_string(context_length, chat)
-    retriever = await get_retriever_for_user(chat["user_email"])
 
     last_human_message = None
     for message in reversed(chat["messages"]):
@@ -244,6 +246,11 @@ async def generate_response(chat_id: str):
 
     if not last_human_message:
         return
+    
+
+    print(last_human_message)
+
+    retriever = await get_retriever_for_user(chat["user_email"])
 
     qa_chain = initialize_qa_chain(
         app.llm,

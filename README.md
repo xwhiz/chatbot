@@ -90,6 +90,8 @@ Then in the terminal, run the following command to start the Ollama server:
 ollama pull llama3.1
 ollama pull deepseek-r1:14b
 ollama pull qwen2.5:14b
+ollama pull gemma3:4b
+ollama pull gemma3:12b
 ```
 
 This will install the required dependencies and start the server.

@@ -36,6 +36,8 @@ export default function Home() {
     { name: "llama3.1", modelName: "llama3.1" },
     { name: "DeepSeek-r1", modelName: "deepseek-r1:14b" },
     { name: "Qwen2.5", modelName: "qwen2.5:14b" },
+    { name: "Gemma3 4b", modelName: "gemma3:4b" },
+    { name: "Gemma3 12b", modelName: "gemma3:12b" },
   ]);
   const [selectedModel, setSelectedModel] = useState<number>(0);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);

@@ -285,21 +285,21 @@ async def generate_response(chat_id: str):
         f"{message['sender']}: {message['message']}" for message in chat["messages"]
     ]
 
-    rephrased_question = (
-        rephrase_question(history, last_human_message["message"]).split(":")[-1].strip()
-    )
+    #rephrased_question = (
+    #    rephrase_question(history, last_human_message["message"]).split(":")[-1].strip()
+    #)
 
     if last_human_message["use_knowledge_base"]:
-        print(retriever.invoke(rephrased_question))
+        print(retriever.invoke(last_human_message["message"]))
 
-    print("*" * 25)
-    print("Rephrased question:", rephrased_question)
-    print("*" * 25)
+    #print("*" * 25)
+    #print("Rephrased question:", rephrased_question)
+    #print("*" * 25)
 
     try:
         # stream = qa_chain.stream(last_human_message["message"])
         stream = qa_chain.stream(
-            f"Question: {last_human_message['message']}\nRephrased Question: {rephrased_question}"
+            f"Question: {last_human_message['message']}"
         )
     except Exception as e:
         print("Error in generating response:", e)
